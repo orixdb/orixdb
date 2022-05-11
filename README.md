@@ -1,3 +1,3 @@
 # orixdb
-A simple multi-model NoSQL database, written in and for nodejs.
+An efficient multi-model NoSQL database, written in Rust for the modern web.
 Version 0.0.1
