@@ -5,7 +5,7 @@ OrixDB
 Written in Rust for the modern web
 
 
-This branch of the repo always contains the latest stable release of OrixDB.
+⚠️ This branch of the repo always contains the latest stable release of OrixDB.
 But there hasn't been any release of the project yet.
 Therefore, this branch is empty for now.
 
