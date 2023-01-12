@@ -89,6 +89,18 @@ fn main() {
 							defragmented.
 						")
 				)
+				.arg(
+					Arg::new("logging")
+						.long("logging")
+						.short('l')
+						.required(false)
+						.help("The logging type of the new store.")
+						.long_help("\
+							The logging type of the new store.\n\
+							Allowed values are: \"off\", \"minimal\",\n\
+							\"normal\" (default) and \"detailed\".\
+						")
+				)
 		)
 
 		.subcommand(
