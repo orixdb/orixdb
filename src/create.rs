@@ -170,6 +170,22 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		dest_exists = true;
 	}
 
+	if matches.contains_id("slug") {
+		store.slug = matches.get_one::<String>("slug").unwrap().clone();
+		if !store.slug.chars().all(
+			|c: char| {
+				(c.is_ascii_alphanumeric() && c.is_lowercase())
+				|| "-_".contains(c)
+			}
+		) {
+			basics::red_err(
+				"The store slug must only contain lowercase\n".to_owned()
+				+ "alphanumeric characters, dashes and underscores."
+			);
+			return std::process::ExitCode::FAILURE;
+		}
+	}
+
 	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", dest_path.display());
 
 	if matches.contains_id("name") {
@@ -182,17 +198,16 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		;
 	}
 
-	// if matches.contains_id("slug") {
-	// 	store.slug = matches.get_one::<String>("slug").unwrap().clone();
-	// 	println!("✔ Store slug: {}", store.slug);
-	// }
-	// else {
-	// 	store.slug = Text::new("Store slug: ")
-	// 		.with_default(&*slugify(store.name.clone()))
-	// 		.prompt().unwrap()
-	// 	;
-	// }
-	//
+	if matches.contains_id("slug") {
+		println!("✔ Store slug: {}", store.slug);
+	}
+	else {
+		store.slug = Text::new("Store slug: ")
+			.with_default(&*slugify(store.name.clone()))
+			.prompt().unwrap()
+		;
+	}
+
 	// if matches.contains_id("type") {
 	// 	store.slug = matches.get_one::<String>("slug").unwrap().clone();
 	// 	println!("✔ Store slug: {}", store.slug);
