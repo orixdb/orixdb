@@ -146,7 +146,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			}
 
 			dest_parent = temp_parent.canonicalize().unwrap();
-			dest_path = temp_parent.to_path_buf();
+			dest_path = dest_parent.clone();
 			dest_folder = dest_temp.file_name().unwrap()
 				.to_os_string().into_string().unwrap()
 			;
@@ -170,17 +170,17 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		dest_exists = true;
 	}
 
-	// if matches.contains_id("name") {}
-	//
-	// if matches.contains_id("name") {
-	// 	store.name = matches.get_one::<String>("name").unwrap().clone();
-	// 	println!("✔ Store name: {}", store.name);
-	// }
-	// else {
-	// 	store.name = Text::new("Store name: ")
-	// 		.with_default(&*dest_folder).prompt().unwrap()
-	// 	;
-	// }
+	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", dest_path.display());
+
+	if matches.contains_id("name") {
+		store.name = matches.get_one::<String>("name").unwrap().clone();
+		println!("✔ Store name: {}", store.name);
+	}
+	else {
+		store.name = Text::new("Store name: ")
+			.with_default(&*dest_folder).prompt().unwrap()
+		;
+	}
 
 	// if matches.contains_id("slug") {
 	// 	store.slug = matches.get_one::<String>("slug").unwrap().clone();
@@ -216,7 +216,9 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	// }
 
 	println!();
+	println!("path: {:#?}", dest_path);
 	println!("folder: {:#?}", dest_folder);
+	println!("exists: {:#?}", dest_exists);
 	if !dest_exists { println!("parent: {:#?}", dest_parent) };
 	println!("name: {:#?}", store.name);
 	println!("slug: {:#?}", store.slug);
