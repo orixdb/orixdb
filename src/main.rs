@@ -10,14 +10,14 @@ mod upgrade;
 mod copy;
 mod convert;
 
-fn main() {
-	let sub_commands: HashMap<&str, fn(&ArgMatches)> = HashMap::from([
-		("create", create::main as fn(&ArgMatches)),
-		("serve", serve::main as fn(&ArgMatches)),
-		("optimize", optimize::main as fn(&ArgMatches)),
-		("upgrade", upgrade::main as fn(&ArgMatches)),
-		("copy", copy::main as fn(&ArgMatches)),
-		("convert", convert::main as fn(&ArgMatches))
+fn main() -> std::process::ExitCode {
+	let sub_commands: HashMap<&str, fn(&ArgMatches) -> std::process::ExitCode> = HashMap::from([
+		("create", create::main as fn(&ArgMatches) -> std::process::ExitCode),
+		("serve", serve::main as fn(&ArgMatches) -> std::process::ExitCode),
+		("optimize", optimize::main as fn(&ArgMatches) -> std::process::ExitCode),
+		("upgrade", upgrade::main as fn(&ArgMatches) -> std::process::ExitCode),
+		("copy", copy::main as fn(&ArgMatches) -> std::process::ExitCode),
+		("convert", convert::main as fn(&ArgMatches) -> std::process::ExitCode)
 	]);
 
 	let conf = basics::get_conf();
@@ -131,5 +131,5 @@ fn main() {
 		.get_matches();
 
 	let sub = matches.subcommand().unwrap();
-	sub_commands.get(sub.0).unwrap()(sub.1);
+	return sub_commands.get(sub.0).unwrap()(sub.1);
 }

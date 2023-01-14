@@ -5,6 +5,8 @@ use clap::ArgMatches;
 use inquire::{Select, Text};
 use slug::slugify;
 
+use crate::basics;
+
 #[derive(Debug)] // To remove later
 #[derive(Clone)]
 #[derive(Copy)]
@@ -41,7 +43,7 @@ struct Store {
 	defaults: Instance
 }
 
-pub fn main(matches: &ArgMatches) {
+pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let store_type_options = HashMap::from([
 		("live", StoreType::Live),
 		("lite", StoreType::Lite),
@@ -63,7 +65,7 @@ pub fn main(matches: &ArgMatches) {
 	;
 
 	let mut dest_path: PathBuf;
-	let dest_parent: PathBuf;
+	let mut dest_parent: PathBuf = PathBuf::new();
 	let dest_folder: String;
 	let dest_exists: bool;
 
@@ -97,20 +99,20 @@ pub fn main(matches: &ArgMatches) {
 		;
 		let mut dest_temp = PathBuf::from(folder);
 		if dest_temp.is_file() {
-			eprintln!("\
-				The destination path resolves to a file.\n\
-				A new store can't be set in a file but in a directory.\
-			");
-			std::process::exit(1);
+			basics::red_err(
+				"The destination path resolves to a file.\n".to_owned()
+				+ "A new store can't be set in a file but in a directory."
+			);
+			return std::process::ExitCode::FAILURE;
 		}
 		if dest_temp.is_dir() {
 			let is_empty = dest_temp.read_dir().unwrap().next().is_none();
 			if !is_empty {
-				eprintln!("\
-					The destination folder is not empty.\n\
-					Then a new store can't be set there.\
-				");
-				std::process::exit(1);
+				basics::red_err(
+					"The destination folder is not empty.\n".to_owned()
+					+ "Then a new store can't be set there."
+				);
+				return std::process::ExitCode::FAILURE;
 			}
 			dest_path = dest_temp.canonicalize().unwrap();
 			dest_folder = dest_path.file_name().unwrap()
@@ -125,24 +127,22 @@ pub fn main(matches: &ArgMatches) {
 
 			let temp_parent = dest_temp.parent().unwrap();
 			if !temp_parent.exists() {
-				eprintln!(
-					"\
-						The folder: \"{:?}\" does not exist.\n\
-						Then a new store can't be set in it.\
-					",
-					temp_parent
+				basics::red_err(
+					"The folder: \"".to_owned()
+					+ temp_parent.to_str().unwrap()
+					+ "\" does not exist.\n"
+					+ "Then a new store can't be set in it."
 				);
-				std::process::exit(1);
+				return std::process::ExitCode::FAILURE;
 			}
 			if temp_parent.is_file() {
-				eprintln!(
-					"\
-						The path: \"{:?}\" resolves to a file.\n\
-						Then a new store can't be set in it.\
-					",
-					temp_parent
+				basics::red_err(
+					"The path: \"".to_owned()
+					+ temp_parent.to_str().unwrap()
+					+ "\" resolves to a file.\n"
+					+ "Then a new store can't be set in it."
 				);
-				std::process::exit(1);
+				return std::process::ExitCode::FAILURE;
 			}
 
 			dest_parent = temp_parent.canonicalize().unwrap();
@@ -158,11 +158,11 @@ pub fn main(matches: &ArgMatches) {
 		dest_path = std::env::current_dir().unwrap();
 		let is_empty = dest_path.read_dir().unwrap().next().is_none();
 		if !is_empty {
-			eprintln!("\
-				The current folder is not empty.\n\
-				Then a new store can't be set here.\
-			");
-			std::process::exit(1);
+			basics::red_err(
+				"The current folder is not empty.\n".to_owned()
+				+ "Then a new store can't be set here."
+			);
+			return std::process::ExitCode::FAILURE;
 		}
 		dest_folder = dest_path.file_name().unwrap()
 			.to_os_string().into_string().unwrap()
@@ -170,17 +170,17 @@ pub fn main(matches: &ArgMatches) {
 		dest_exists = true;
 	}
 
-	if matches.contains_id("name") {}
-
-	if matches.contains_id("name") {
-		store.name = matches.get_one::<String>("name").unwrap().clone();
-		println!("✔ Store name: {}", store.name);
-	}
-	else {
-		store.name = Text::new("Store name: ")
-			.with_default(&*dest_folder).prompt().unwrap()
-		;
-	}
+	// if matches.contains_id("name") {}
+	//
+	// if matches.contains_id("name") {
+	// 	store.name = matches.get_one::<String>("name").unwrap().clone();
+	// 	println!("✔ Store name: {}", store.name);
+	// }
+	// else {
+	// 	store.name = Text::new("Store name: ")
+	// 		.with_default(&*dest_folder).prompt().unwrap()
+	// 	;
+	// }
 
 	// if matches.contains_id("slug") {
 	// 	store.slug = matches.get_one::<String>("slug").unwrap().clone();
@@ -217,7 +217,7 @@ pub fn main(matches: &ArgMatches) {
 
 	println!();
 	println!("folder: {:#?}", dest_folder);
-	if !dest_exists { println!("folder: {:#?}", dest_parent) };
+	if !dest_exists { println!("parent: {:#?}", dest_parent) };
 	println!("name: {:#?}", store.name);
 	println!("slug: {:#?}", store.slug);
 	println!("kind: {:#?}", store.kind);
@@ -227,4 +227,6 @@ pub fn main(matches: &ArgMatches) {
 	println!("def.chk: {:#?}", store.defaults.checksumming);
 	println!("def.api: {:#?}", store.defaults.api_port);
 	println!("def.clu: {:#?}", store.defaults.cluster_port);
+
+	return std::process::ExitCode::SUCCESS;
 }
