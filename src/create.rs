@@ -43,6 +43,22 @@ struct Store {
 	defaults: Instance
 }
 
+fn check_slug(slug: &String) -> bool {
+	if !slug.chars().all(
+		|c: char| {
+			(c.is_ascii_alphanumeric() && c.is_lowercase())
+				|| "-_".contains(c)
+		}
+	) {
+		basics::red_err(
+			"The store slug must contain only lowercase\n".to_owned()
+				+ "alphanumeric characters, dashes and underscores."
+		);
+		return false;
+	}
+	return true;
+}
+
 pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let store_type_options = HashMap::from([
 		("live", StoreType::Live),
@@ -172,18 +188,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 	if matches.contains_id("slug") {
 		store.slug = matches.get_one::<String>("slug").unwrap().clone();
-		if !store.slug.chars().all(
-			|c: char| {
-				(c.is_ascii_alphanumeric() && c.is_lowercase())
-				|| "-_".contains(c)
-			}
-		) {
-			basics::red_err(
-				"The store slug must only contain lowercase\n".to_owned()
-				+ "alphanumeric characters, dashes and underscores."
-			);
-			return std::process::ExitCode::FAILURE;
-		}
+		if !check_slug(&store.slug) { return std::process::ExitCode::FAILURE }
 	}
 
 	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", dest_path.display());
@@ -206,6 +211,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			.with_default(&*slugify(store.name.clone()))
 			.prompt().unwrap()
 		;
+		if !check_slug(&store.slug) { return std::process::ExitCode::FAILURE }
 	}
 
 	// if matches.contains_id("type") {
