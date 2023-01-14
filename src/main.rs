@@ -84,7 +84,7 @@ fn main() -> std::process::ExitCode {
 						.required(false)
 						.help("Whether or not the data is ordered during serving.")
 						.long_help("\
-							Whether or not live data ordering is active or not.\n\
+							Whether or not live data ordering is active.\n\
 							When this option is active, the data files are constantly\n\
 							defragmented.
 						")

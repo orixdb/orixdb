@@ -7,7 +7,7 @@ use slug::slugify;
 
 use crate::basics;
 
-#[derive(Debug)] // To remove later
+#[derive(Debug)]
 #[derive(Clone)]
 #[derive(Copy)]
 enum LogLevel {
@@ -17,7 +17,7 @@ enum LogLevel {
 	Detailed
 }
 
-#[derive(Debug)] // To remove later
+#[derive(Debug)]
 #[derive(Clone)]
 #[derive(Copy)]
 enum StoreType {
@@ -29,7 +29,6 @@ enum StoreType {
 
 struct Instance {
 	buffering: bool,
-	checksumming: bool,
 	api_port: u16,
 	cluster_port: u16
 }
@@ -39,6 +38,7 @@ struct Store {
 	slug: String,
 	kind: StoreType,
 	ordered: bool,
+	checksumming: bool,
 	logging: LogLevel,
 	defaults: Instance
 }
@@ -46,13 +46,14 @@ struct Store {
 fn check_slug(slug: &String) -> bool {
 	if !slug.chars().all(
 		|c: char| {
-			(c.is_ascii_alphanumeric() && c.is_lowercase())
-				|| "-_".contains(c)
+			(c.is_ascii_alphabetic() && c.is_lowercase())
+			|| c.is_ascii_digit()
+			|| "-_".contains(c)
 		}
 	) {
 		basics::red_err(
 			"The store slug must contain only lowercase\n".to_owned()
-				+ "alphanumeric characters, dashes and underscores."
+			+ "alphanumeric characters, dashes and underscores."
 		);
 		return false;
 	}
@@ -90,10 +91,10 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		slug: String::from(""),
 		kind: StoreType::Live,
 		ordered: false,
+		checksumming: true,
 		logging: LogLevel::Normal,
 		defaults: Instance {
 			buffering: false,
-			checksumming: true,
 			api_port: 7979,
 			cluster_port: 7900
 		}
@@ -187,14 +188,28 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	}
 
 	if matches.contains_id("slug") {
-		store.slug = matches.get_one::<String>("slug").unwrap().clone();
+		store.slug = matches.get_one::<String>("slug").unwrap().to_string();
 		if !check_slug(&store.slug) { return std::process::ExitCode::FAILURE }
+	}
+
+	if matches.contains_id("type") {
+		let store_type = matches.get_one::<String>("type")
+			.unwrap().to_string()
+		;
+		if !store_type_options.contains_key(&*store_type) {
+			basics::red_err(
+				"The store type must have one of the ".to_owned()
+					+ "authorized values.\n(Try: `orixdb help create`)"
+			);
+			return std::process::ExitCode::FAILURE;
+		}
+		store.kind = store_type_options[&*store_type];
 	}
 
 	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", dest_path.display());
 
 	if matches.contains_id("name") {
-		store.name = matches.get_one::<String>("name").unwrap().clone();
+		store.name = matches.get_one::<String>("name").unwrap().to_string();
 		println!("✔ Store name: {}", store.name);
 	}
 	else {
@@ -214,17 +229,16 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		if !check_slug(&store.slug) { return std::process::ExitCode::FAILURE }
 	}
 
-	// if matches.contains_id("type") {
-	// 	store.slug = matches.get_one::<String>("slug").unwrap().clone();
-	// 	println!("✔ Store slug: {}", store.slug);
-	// }
-	// else {
-	// 	let store_type = Select::new("Store type:", store_type_strings)
-	// 		.prompt().unwrap()
-	// 		;
-	// 	store.kind = store_type_options[store_type];
-	// }
-	//
+	if matches.contains_id("type") {
+		println!("✔ Store type: {:?}", store.kind);
+	}
+	else {
+		let store_type = Select::new("Store type:", store_type_strings)
+			.prompt().unwrap()
+		;
+		store.kind = store_type_options[store_type];
+	}
+
 	// if matches.contains_id("logging") {
 	// 	store.slug = matches.get_one::<String>("logging").unwrap().clone();
 	// 	println!("✔ Store slug: {}", store.slug);
@@ -244,10 +258,10 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	println!("name: {:#?}", store.name);
 	println!("slug: {:#?}", store.slug);
 	println!("kind: {:#?}", store.kind);
-	println!("ordered: {:#?}", store.ordered);
-	println!("def.log: {:#?}", store.logging);
+	println!("ord: {:#?}", store.ordered);
+	println!("check: {:#?}", store.checksumming);
+	println!("log: {:#?}", store.logging);
 	println!("def.buff: {:#?}", store.defaults.buffering);
-	println!("def.chk: {:#?}", store.defaults.checksumming);
 	println!("def.api: {:#?}", store.defaults.api_port);
 	println!("def.clu: {:#?}", store.defaults.cluster_port);
 
