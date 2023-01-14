@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
-use inquire::{Select, Text};
 use slug::slugify;
 
 use crate::basics;
@@ -81,10 +80,10 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		.keys().cloned().collect::<Vec<&str>>()
 	;
 
-	let mut dest_path: PathBuf;
-	let mut dest_parent: PathBuf = PathBuf::new();
-	let dest_folder: String;
-	let dest_exists: bool;
+	let mut inst_path: PathBuf;
+	let mut inst_parent: PathBuf = PathBuf::new();
+	let inst_folder: String;
+	let inst_exists: bool;
 
 	let mut store = Store{
 		name: String::from(""),
@@ -114,35 +113,35 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		let folder = matches.get_one::<String>("folder")
 			.unwrap()
 		;
-		let mut dest_temp = PathBuf::from(folder);
-		if dest_temp.is_file() {
+		let mut inst_temp = PathBuf::from(folder);
+		if inst_temp.is_file() {
 			basics::red_err(
-				"The destination path resolves to a file.\n".to_owned()
+				"The installation path resolves to a file.\n".to_owned()
 				+ "A new store can't be set in a file but in a directory."
 			);
 			return std::process::ExitCode::FAILURE;
 		}
-		if dest_temp.is_dir() {
-			let is_empty = dest_temp.read_dir().unwrap().next().is_none();
+		if inst_temp.is_dir() {
+			let is_empty = inst_temp.read_dir().unwrap().next().is_none();
 			if !is_empty {
 				basics::red_err(
-					"The destination folder is not empty.\n".to_owned()
+					"The installation folder is not empty.\n".to_owned()
 					+ "Then a new store can't be set there."
 				);
 				return std::process::ExitCode::FAILURE;
 			}
-			dest_path = dest_temp.canonicalize().unwrap();
-			dest_folder = dest_path.file_name().unwrap()
+			inst_path = inst_temp.canonicalize().unwrap();
+			inst_folder = inst_path.file_name().unwrap()
 				.to_os_string().into_string().unwrap()
 			;
-			dest_exists = true;
+			inst_exists = true;
 		}
 		else {
-			if dest_temp.is_relative() {
-				dest_temp = PathBuf::from("./".to_owned() + folder);
+			if inst_temp.is_relative() {
+				inst_temp = PathBuf::from("./".to_owned() + folder);
 			}
 
-			let temp_parent = dest_temp.parent().unwrap();
+			let temp_parent = inst_temp.parent().unwrap();
 			if !temp_parent.exists() {
 				basics::red_err(
 					"The folder: \"".to_owned()
@@ -162,29 +161,30 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 				return std::process::ExitCode::FAILURE;
 			}
 
-			dest_parent = temp_parent.canonicalize().unwrap();
-			dest_path = dest_parent.clone();
-			dest_folder = dest_temp.file_name().unwrap()
+			inst_parent = temp_parent.canonicalize().unwrap();
+			inst_path = inst_parent.clone();
+			inst_folder = inst_temp.file_name().unwrap()
 				.to_os_string().into_string().unwrap()
 			;
-			dest_path.push(&dest_folder);
-			dest_exists = false;
+			inst_path.push(&inst_folder);
+			inst_exists = false;
 		}
 	}
 	else {
-		dest_path = std::env::current_dir().unwrap();
-		let is_empty = dest_path.read_dir().unwrap().next().is_none();
+		inst_path = std::env::current_dir().unwrap();
+		let is_empty = inst_path.read_dir().unwrap().next().is_none();
 		if !is_empty {
 			basics::red_err(
 				"The current folder is not empty.\n".to_owned()
-				+ "Then a new store can't be set here."
+				+ "Then a new store can't be set here.\n"
+				+ "You can specify another installation folder as argument."
 			);
 			return std::process::ExitCode::FAILURE;
 		}
-		dest_folder = dest_path.file_name().unwrap()
+		inst_folder = inst_path.file_name().unwrap()
 			.to_os_string().into_string().unwrap()
 		;
-		dest_exists = true;
+		inst_exists = true;
 	}
 
 	if matches.contains_id("slug") {
@@ -206,15 +206,15 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		store.kind = store_type_options[&*store_type];
 	}
 
-	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", dest_path.display());
+	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", inst_path.display());
 
 	if matches.contains_id("name") {
 		store.name = matches.get_one::<String>("name").unwrap().to_string();
 		println!("✔ Store name: {}", store.name);
 	}
 	else {
-		store.name = Text::new("Store name: ")
-			.with_default(&*dest_folder).prompt().unwrap()
+		store.name = inquire::Text::new("Store name: ")
+			.with_default(&*inst_folder).prompt().unwrap()
 		;
 	}
 
@@ -222,7 +222,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		println!("✔ Store slug: {}", store.slug);
 	}
 	else {
-		store.slug = Text::new("Store slug: ")
+		store.slug = inquire::Text::new("Store slug: ")
 			.with_default(&*slugify(store.name.clone()))
 			.prompt().unwrap()
 		;
@@ -233,10 +233,20 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		println!("✔ Store type: {:?}", store.kind);
 	}
 	else {
-		let store_type = Select::new("Store type:", store_type_strings)
+		let store_type = inquire::Select::new("Store type:", store_type_strings)
 			.prompt().unwrap()
 		;
 		store.kind = store_type_options[store_type];
+	}
+
+	if *matches.get_one::<bool>("ordered").unwrap() {
+		store.ordered = true;
+		println!("✔ Automatic data ordering: Yes");
+	}
+	else {
+		store.ordered = inquire::Confirm::new("Automatic data ordering ?")
+			.prompt().unwrap()
+		;
 	}
 
 	// if matches.contains_id("logging") {
@@ -244,17 +254,17 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	// 	println!("✔ Store slug: {}", store.slug);
 	// }
 	// else {
-	// 	let store_type = Select::new("Store type:", log_level_strings)
+	// 	let store_type = inquire::Select::new("Store type:", log_level_strings)
 	// 		.prompt().unwrap()
 	// 		;
 	// 	store.logging = log_level_options[store_type];
 	// }
 
 	println!();
-	println!("path: {:#?}", dest_path);
-	println!("folder: {:#?}", dest_folder);
-	println!("exists: {:#?}", dest_exists);
-	if !dest_exists { println!("parent: {:#?}", dest_parent) };
+	println!("path: {:#?}", inst_path);
+	println!("folder: {:#?}", inst_folder);
+	println!("exists: {:#?}", inst_exists);
+	if !inst_exists { println!("parent: {:#?}", inst_parent) };
 	println!("name: {:#?}", store.name);
 	println!("slug: {:#?}", store.slug);
 	println!("kind: {:#?}", store.kind);
