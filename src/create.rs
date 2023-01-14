@@ -249,6 +249,16 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		;
 	}
 
+	if *matches.get_one::<bool>("checksumming").unwrap() {
+		store.checksumming = true;
+		println!("✔ Data checksumming: Yes");
+	}
+	else {
+		store.checksumming = inquire::Confirm::new("Data checksumming ?")
+			.prompt().unwrap()
+		;
+	}
+
 	// if matches.contains_id("logging") {
 	// 	store.slug = matches.get_one::<String>("logging").unwrap().clone();
 	// 	println!("✔ Store slug: {}", store.slug);

@@ -90,6 +90,19 @@ fn main() -> std::process::ExitCode {
 						")
 				)
 				.arg(
+					Arg::new("checksumming")
+						.long("checksum")
+						.short('c')
+						.action(ArgAction::SetTrue)
+						.required(false)
+						.help("Whether or not checksums are used to ensure data integrity.")
+						.long_help("\
+							Whether or not checksums are used to ensure data integrity..\n\
+							When this option is active, checksum files are constantly\n\
+							generated to make sure that the data aren't corrupted.
+						")
+				)
+				.arg(
 					Arg::new("logging")
 						.long("logging")
 						.short('l')
