@@ -195,15 +195,29 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	if matches.contains_id("type") {
 		let store_type = matches.get_one::<String>("type")
 			.unwrap().to_string()
-		;
+			;
 		if !store_type_options.contains_key(&*store_type) {
 			basics::red_err(
 				"The store type must have one of the ".to_owned()
-					+ "authorized values.\n(Try: `orixdb help create`)"
+					+ "authorized values.\n(Try: `orixdb help create` to know more...)"
 			);
 			return std::process::ExitCode::FAILURE;
 		}
 		store.kind = store_type_options[&*store_type];
+	}
+
+	if matches.contains_id("logging") {
+		let store_logging = matches.get_one::<String>("logging")
+			.unwrap().to_string()
+		;
+		if !log_level_options.contains_key(&*store_logging) {
+			basics::red_err(
+				"The store logging mode must have one of the ".to_owned()
+					+ "authorized values.\n(Try: `orixdb help create` to know more...)"
+			);
+			return std::process::ExitCode::FAILURE;
+		}
+		store.logging = log_level_options[&*store_logging];
 	}
 
 	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", inst_path.display());
@@ -259,16 +273,15 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		;
 	}
 
-	// if matches.contains_id("logging") {
-	// 	store.slug = matches.get_one::<String>("logging").unwrap().clone();
-	// 	println!("✔ Store slug: {}", store.slug);
-	// }
-	// else {
-	// 	let store_type = inquire::Select::new("Store type:", log_level_strings)
-	// 		.prompt().unwrap()
-	// 		;
-	// 	store.logging = log_level_options[store_type];
-	// }
+	if matches.contains_id("logging") {
+		println!("✔ Store logging mode: {:?}", store.logging);
+	}
+	else {
+		let store_logging = inquire::Select::new("Store logging mode:", log_level_strings)
+			.prompt().unwrap()
+		;
+		store.logging = log_level_options[store_logging];
+	}
 
 	println!();
 	println!("path: {:#?}", inst_path);
