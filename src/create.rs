@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
-use slug::slugify;
 
 use crate::basics;
 
@@ -28,13 +27,16 @@ enum StoreType {
 
 struct Instance {
 	buffering: bool,
+	silent: bool,
 	api_port: u16,
-	cluster_port: u16
+	api_scan: bool,
+	cluster_port: u16,
+	cluster_scan: bool
 }
 
 struct Store {
 	name: String,
-	slug: String,
+	id: String,
 	kind: StoreType,
 	ordered: bool,
 	checksumming: bool,
@@ -42,8 +44,8 @@ struct Store {
 	defaults: Instance
 }
 
-fn check_slug(slug: &String) -> bool {
-	if !slug.chars().all(
+fn check_id(id: &String) -> bool {
+	if !id.chars().all(
 		|c: char| {
 			(c.is_ascii_alphabetic() && c.is_lowercase())
 			|| c.is_ascii_digit()
@@ -51,7 +53,7 @@ fn check_slug(slug: &String) -> bool {
 		}
 	) {
 		basics::red_err(
-			"The store slug must contain only lowercase\n".to_owned()
+			"The store id must contain only lowercase\n".to_owned()
 			+ "alphanumeric characters, dashes and underscores."
 		);
 		return false;
@@ -87,15 +89,18 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 	let mut store = Store{
 		name: String::from(""),
-		slug: String::from(""),
+		id: String::from(""),
 		kind: StoreType::Live,
 		ordered: false,
 		checksumming: true,
 		logging: LogLevel::Normal,
 		defaults: Instance {
 			buffering: false,
-			api_port: 7979,
-			cluster_port: 7900
+			silent: false,
+			api_port: 7900,
+			api_scan: false,
+			cluster_port: 7979,
+			cluster_scan: false
 		}
 	};
 
@@ -187,9 +192,9 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		inst_exists = true;
 	}
 
-	if matches.contains_id("slug") {
-		store.slug = matches.get_one::<String>("slug").unwrap().to_string();
-		if !check_slug(&store.slug) { return std::process::ExitCode::FAILURE }
+	if matches.contains_id("id") {
+		store.id = matches.get_one::<String>("id").unwrap().to_string();
+		if !check_id(&store.id) { return std::process::ExitCode::FAILURE }
 	}
 
 	if matches.contains_id("type") {
@@ -232,22 +237,24 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		;
 	}
 
-	if matches.contains_id("slug") {
-		println!("✔ Store slug: {}", store.slug);
+	if matches.contains_id("id") {
+		println!("✔ Store id: {}", store.id);
 	}
 	else {
-		store.slug = inquire::Text::new("Store slug: ")
-			.with_default(&*slugify(store.name.clone()))
+		store.id = inquire::Text::new("Store id: ")
+			.with_default(&*slug::slugify(store.name.clone()))
 			.prompt().unwrap()
 		;
-		if !check_slug(&store.slug) { return std::process::ExitCode::FAILURE }
+		if !check_id(&store.id) { return std::process::ExitCode::FAILURE }
 	}
 
 	if matches.contains_id("type") {
 		println!("✔ Store type: {:?}", store.kind);
 	}
 	else {
-		let store_type = inquire::Select::new("Store type:", store_type_strings)
+		let store_type = inquire::Select::new(
+			"Store type:", store_type_strings
+		)
 			.prompt().unwrap()
 		;
 		store.kind = store_type_options[store_type];
@@ -259,7 +266,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	}
 	else {
 		store.ordered = inquire::Confirm::new("Automatic data ordering ?")
-			.prompt().unwrap()
+			.with_default(false).prompt().unwrap()
 		;
 	}
 
@@ -269,7 +276,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	}
 	else {
 		store.checksumming = inquire::Confirm::new("Data checksumming ?")
-			.prompt().unwrap()
+			.with_default(true).prompt().unwrap()
 		;
 	}
 
@@ -277,10 +284,106 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		println!("✔ Store logging mode: {:?}", store.logging);
 	}
 	else {
-		let store_logging = inquire::Select::new("Store logging mode:", log_level_strings)
+		let store_logging = inquire::Select::new(
+			"Store logging mode:", log_level_strings
+		)
 			.prompt().unwrap()
 		;
 		store.logging = log_level_options[store_logging];
+	}
+
+	println!(
+		"\n{}",
+		"Defaults settings for each run OrixDB on this store:\n".to_owned()
+		+ "\x1b[36mBuffering\x1b[0m: \x1b[34m\x1b[1mNo;\x1b[0m "
+		+ "\x1b[36mSilent\x1b[0m: \x1b[34m\x1b[1mNo;\x1b[0m "
+		+ "\x1b[36mAPI port\x1b[0m: \x1b[34m\x1b[1m7900...;\x1b[0m "
+		+ "\x1b[36mCluster port\x1b[0m: \x1b[34m\x1b[1m7979...;\x1b[0m"
+	);
+	let change_defaults = inquire::Confirm::new(
+		"Do you want to change them ?"
+	).with_default(false).prompt().unwrap();
+	if change_defaults {
+		store.defaults.buffering = inquire::Confirm::new("Transaction buffering ?")
+			.with_default(false).prompt().unwrap()
+		;
+
+		store.defaults.silent = inquire::Confirm::new("Silent terminal ?")
+			.with_default(false).prompt().unwrap()
+		;
+
+		let mut number;
+		let mut ellipsis;
+		let mut num_try;
+		let mut test_0;
+
+		let api_port = inquire::Text::new("Default API port:")
+			.with_help_message("\
+				You can add an ellipsis (Ex: 5500...) to allow port scanning, starting\n\
+				from the given number, in case the the port is not free.\
+			").with_default("7900...").prompt().unwrap()
+		;
+		if api_port.find(".").is_some() {
+			(number, ellipsis) = api_port.split_once(".").unwrap();
+			if
+				ellipsis.len() < 1 ||
+				! ellipsis.chars().all(|c: char| c == '.')
+			{
+				basics::red_err(
+					"The ellipsis must contain two or more periods.\n".to_owned()
+					+ "And nothing else. (Ex: 5500...)"
+				);
+				return std::process::ExitCode::FAILURE;
+			}
+			store.defaults.api_scan = true;
+		}
+		else {
+			number = &*api_port;
+		}
+		num_try = number.parse::<u16>();
+		test_0 = num_try.clone();
+		if num_try.is_err() || test_0.unwrap() == 0 {
+			basics::red_err(
+				"The API port must be a valid number between 1 and 65535, ".to_owned()
+				+ "with an optional ellipsis at the end. (Ex: 5500...)"
+			);
+			return std::process::ExitCode::FAILURE;
+		}
+		store.defaults.api_port = num_try.unwrap();
+
+		let cluster_port = inquire::Text::new("Default cluster port:")
+			.with_help_message("\
+				You can add an ellipsis (Ex: 5500...) to allow port scanning, starting\n\
+				from the given number, in case the the port is not free.\
+			").with_default("7979...").prompt().unwrap()
+			;
+		if cluster_port.find(".").is_some() {
+			(number, ellipsis) = cluster_port.split_once(".").unwrap();
+			if
+				ellipsis.len() < 1 ||
+				! ellipsis.chars().all(|c: char| c == '.')
+			{
+				basics::red_err(
+					"The ellipsis must contain two or more periods.\n".to_owned()
+						+ "And nothing else. (Ex: 5500...)"
+				);
+				return std::process::ExitCode::FAILURE;
+			}
+			store.defaults.cluster_scan = true;
+		}
+		else {
+			number = &*cluster_port;
+		}
+		num_try = number.parse::<u16>();
+		test_0 = num_try.clone();
+		if num_try.is_err() || test_0.unwrap() == 0 {
+			basics::red_err(
+				"The cluster port must be a valid number between 1 and 65535, ".to_owned()
+				+ "with an optional ellipsis at the end. (Ex: 5500...)"
+			);
+			return std::process::ExitCode::FAILURE;
+		}
+		store.defaults.cluster_port = num_try.unwrap();
 	}
 
 	println!();
@@ -288,15 +391,22 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	println!("folder: {:#?}", inst_folder);
 	println!("exists: {:#?}", inst_exists);
 	if !inst_exists { println!("parent: {:#?}", inst_parent) };
+
+	println!();
 	println!("name: {:#?}", store.name);
-	println!("slug: {:#?}", store.slug);
+	println!("id: {:#?}", store.id);
 	println!("kind: {:#?}", store.kind);
 	println!("ord: {:#?}", store.ordered);
 	println!("check: {:#?}", store.checksumming);
 	println!("log: {:#?}", store.logging);
+
+	println!();
 	println!("def.buff: {:#?}", store.defaults.buffering);
+	println!("def.silent: {:#?}", store.defaults.silent);
 	println!("def.api: {:#?}", store.defaults.api_port);
+	println!("def.api: {:#?}", store.defaults.api_scan);
 	println!("def.clu: {:#?}", store.defaults.cluster_port);
+	println!("def.clu: {:#?}", store.defaults.cluster_scan);
 
 	return std::process::ExitCode::SUCCESS;
 }

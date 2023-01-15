@@ -11,7 +11,9 @@ mod copy;
 mod convert;
 
 fn main() -> std::process::ExitCode {
-	let sub_commands: HashMap<&str, fn(&ArgMatches) -> std::process::ExitCode> = HashMap::from([
+	let sub_commands: HashMap<
+		&str, fn(&ArgMatches) -> std::process::ExitCode
+	> = HashMap::from([
 		("create", create::main as fn(&ArgMatches) -> std::process::ExitCode),
 		("serve", serve::main as fn(&ArgMatches) -> std::process::ExitCode),
 		("optimize", optimize::main as fn(&ArgMatches) -> std::process::ExitCode),
@@ -27,118 +29,114 @@ fn main() -> std::process::ExitCode {
 		.about(conf.description)
 		.subcommand_required(true)
 
-		.subcommand(
-			Command::new("create")
-				.about("To create a new OrixDB store.")
-				.arg(
-					Arg::new("folder")
-						.required(false)
-						.help("Folder to create for the new store.")
-						.long_help("\
-							Folder to create for the new store.\n\
-							If this arg is not provided, then\n\
-							the current directory is used.\
-						")
-				)
-				.arg(
-					Arg::new("name")
-						.long("name")
-						.short('n')
-						.required(false)
-						.help("The name of the new store.")
-						.long_help("\
-							The name of the new store.\n\
-							If it's not set, it is defaulted\n\
-							to the current directory's name\
-						")
-				)
-				.arg(
-					Arg::new("slug")
-						.long("slug")
-						.short('s')
-						.required(false)
-						.help("The slug of the new store.")
-						.long_help("\
-							The slugified name of the new store.\n\
-							If it's not set, it is defaulted\n\
-							to the current name's slug\
-						")
-				)
-				.arg(
-					Arg::new("type")
-						.long("type")
-						.short('t')
-						.required(false)
-						.help("The type of the new store.")
-						.long_help("\
-							The type of the new store.\n\
-							Allowed values are: \"live\" (default),\n\
-							\"lite\", \"backup\" and \"archive\".\
-						")
-				)
-				.arg(
-					Arg::new("ordered")
-						.long("ordered")
-						.short('o')
-						.action(ArgAction::SetTrue)
-						.required(false)
-						.help("Whether or not the data is ordered during serving.")
-						.long_help("\
-							Whether or not live data ordering is active.\n\
-							When this option is active, the data files are constantly\n\
-							defragmented.
-						")
-				)
-				.arg(
-					Arg::new("checksumming")
-						.long("checksum")
-						.short('c')
-						.action(ArgAction::SetTrue)
-						.required(false)
-						.help("Whether or not checksums are used to ensure data integrity.")
-						.long_help("\
-							Whether or not checksums are used to ensure data integrity..\n\
-							When this option is active, checksum files are constantly\n\
-							generated to make sure that the data aren't corrupted.
-						")
-				)
-				.arg(
-					Arg::new("logging")
-						.long("logging")
-						.short('l')
-						.required(false)
-						.help("The logging type of the new store.")
-						.long_help("\
-							The logging type of the new store.\n\
-							Allowed values are: \"off\", \"minimal\",\n\
-							\"normal\" (default) and \"detailed\".\
-						")
-				)
+		.subcommand(Command::new("create")
+			.about("To create a new OrixDB store.")
+			.arg(
+				Arg::new("folder")
+					.required(false)
+					.help("Folder to create for the new store.")
+					.long_help("\
+						Folder to create for the new store.\n\
+						If this arg is not provided, then\n\
+						the current directory is used.\
+					")
+			)
+			.arg(
+				Arg::new("name")
+					.long("name")
+					.short('n')
+					.required(false)
+					.help("The name of the new store.")
+					.long_help("\
+						The name of the new store.\n\
+						If it's not set, it is defaulted\n\
+						to the current directory's name\
+					")
+			)
+			.arg(
+				Arg::new("id")
+					.long("id")
+					.short('i')
+					.required(false)
+					.help("The id of the new store.")
+					.long_help("\
+						The id of the new store.\n\
+						If it's not set, it is defaulted\n\
+						to the current name's slug\
+					")
+			)
+			.arg(
+				Arg::new("type")
+					.long("type")
+					.short('t')
+					.required(false)
+					.help("The type of the new store.")
+					.long_help("\
+						The type of the new store.\n\
+						Allowed values are: \"live\" (default),\n\
+						\"lite\", \"backup\" and \"archive\".\
+					")
+			)
+			.arg(
+				Arg::new("ordered")
+					.long("ordered")
+					.short('o')
+					.action(ArgAction::SetTrue)
+					.required(false)
+					.help("Whether or not the data is ordered during serving.")
+					.long_help("\
+						Whether or not live data ordering is active.\n\
+						When this option is active, the data files are constantly\n\
+						defragmented.
+					")
+			)
+			.arg(
+				Arg::new("checksumming")
+					.long("checksum")
+					.short('c')
+					.action(ArgAction::SetTrue)
+					.required(false)
+					.help(
+						"Whether or not checksums are used to ensure data integrity."
+					)
+					.long_help("\
+						Whether or not checksums are used to ensure data integrity..\n\
+						When this option is active, checksum files are constantly\n\
+						generated to make sure that the data aren't corrupted.
+					")
+			)
+			.arg(
+				Arg::new("logging")
+					.long("logging")
+					.short('l')
+					.required(false)
+					.help("The logging type of the new store.")
+					.long_help("\
+						The logging type of the new store.\n\
+						Allowed values are: \"off\", \"minimal\",\n\
+						\"normal\" (default) and \"detailed\".\
+					")
+			)
 		)
 
-		.subcommand(
-			Command::new("serve")
-				.about("To launch a server for reading and updating a store.")
+		.subcommand(Command::new("serve")
+			.about("To launch a server for reading and updating a store.")
 		)
 
-		.subcommand(
-			Command::new("optimize")
-				.about("To optimize the data organization of a store.")
+		.subcommand(Command::new("optimize")
+			.about("To optimize the data organization of a store.")
 		)
 
-		.subcommand(
-			Command::new("upgrade")
-				.about("To upgrade a store from a old version to a new one.")
+		.subcommand(Command::new("upgrade")
+			.about("To upgrade a store from a old version to a new one.")
 		)
 
-		.subcommand(
-			Command::new("copy")
-				.about("To create a duplicate of a store with different IDs.")
+		.subcommand(Command::new("copy")
+			.about("To create a duplicate of a store with different IDs.")
 		)
 
-		.subcommand(
-			Command::new("convert")
-				.about("To convert a store from one type to another")
+		.subcommand(Command::new("convert")
+			.about("To convert a store from one type to another")
 		)
 
 		.get_matches();
