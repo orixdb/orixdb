@@ -78,8 +78,8 @@ fn main() -> std::process::ExitCode {
 					")
 			)
 			.arg(
-				Arg::new("ordered")
-					.long("ordered")
+				Arg::new("ordering")
+					.long("ordering")
 					.short('o')
 					.action(ArgAction::SetTrue)
 					.required(false)

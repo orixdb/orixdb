@@ -2,12 +2,14 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
+use serde::Serialize;
 
 use crate::basics;
 
 #[derive(Debug)]
 #[derive(Clone)]
 #[derive(Copy)]
+#[derive(Serialize)]
 enum LogLevel {
 	Off,
 	Minimal,
@@ -18,6 +20,7 @@ enum LogLevel {
 #[derive(Debug)]
 #[derive(Clone)]
 #[derive(Copy)]
+#[derive(Serialize)]
 enum StoreType {
 	Live,
 	Lite,
@@ -25,20 +28,22 @@ enum StoreType {
 	Archive
 }
 
+#[derive(Serialize)]
 struct Instance {
 	buffering: bool,
-	silent: bool,
+	verbosity: bool,
 	api_port: u16,
 	api_scan: bool,
 	cluster_port: u16,
 	cluster_scan: bool
 }
 
+#[derive(Serialize)]
 struct Store {
 	name: String,
 	id: String,
 	kind: StoreType,
-	ordered: bool,
+	ordering: bool,
 	checksumming: bool,
 	logging: LogLevel,
 	defaults: Instance
@@ -83,20 +88,19 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	;
 
 	let mut inst_path: PathBuf;
-	let mut inst_parent: PathBuf = PathBuf::new();
 	let inst_folder: String;
 	let inst_exists: bool;
 
-	let mut store = Store{
+	let mut store = Store {
 		name: String::from(""),
 		id: String::from(""),
 		kind: StoreType::Live,
-		ordered: false,
+		ordering: false,
 		checksumming: true,
 		logging: LogLevel::Normal,
 		defaults: Instance {
 			buffering: false,
-			silent: false,
+			verbosity: false,
 			api_port: 7900,
 			api_scan: false,
 			cluster_port: 7979,
@@ -147,15 +151,6 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			}
 
 			let temp_parent = inst_temp.parent().unwrap();
-			if !temp_parent.exists() {
-				basics::red_err(
-					"The folder: \"".to_owned()
-					+ temp_parent.to_str().unwrap()
-					+ "\" does not exist.\n"
-					+ "Then a new store can't be set in it."
-				);
-				return std::process::ExitCode::FAILURE;
-			}
 			if temp_parent.is_file() {
 				basics::red_err(
 					"The path: \"".to_owned()
@@ -166,8 +161,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 				return std::process::ExitCode::FAILURE;
 			}
 
-			inst_parent = temp_parent.canonicalize().unwrap();
-			inst_path = inst_parent.clone();
+			inst_path = temp_parent.to_path_buf();
 			inst_folder = inst_temp.file_name().unwrap()
 				.to_os_string().into_string().unwrap()
 			;
@@ -260,12 +254,12 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		store.kind = store_type_options[store_type];
 	}
 
-	if *matches.get_one::<bool>("ordered").unwrap() {
-		store.ordered = true;
+	if *matches.get_one::<bool>("ordering").unwrap() {
+		store.ordering = true;
 		println!("✔ Automatic data ordering: Yes");
 	}
 	else {
-		store.ordered = inquire::Confirm::new("Automatic data ordering ?")
+		store.ordering = inquire::Confirm::new("Automatic data ordering ?")
 			.with_default(false).prompt().unwrap()
 		;
 	}
@@ -296,7 +290,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		"\n{}",
 		"Defaults settings for each run OrixDB on this store:\n".to_owned()
 		+ "\x1b[36mBuffering\x1b[0m: \x1b[34m\x1b[1mNo;\x1b[0m "
-		+ "\x1b[36mSilent\x1b[0m: \x1b[34m\x1b[1mNo;\x1b[0m "
+		+ "\x1b[36mVerbosity\x1b[0m: \x1b[34m\x1b[1mNo;\x1b[0m "
 		+ "\x1b[36mAPI port\x1b[0m: \x1b[34m\x1b[1m7900...;\x1b[0m "
 		+ "\x1b[36mCluster port\x1b[0m: \x1b[34m\x1b[1m7979...;\x1b[0m"
 	);
@@ -308,7 +302,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			.with_default(false).prompt().unwrap()
 		;
 
-		store.defaults.silent = inquire::Confirm::new("Silent terminal ?")
+		store.defaults.verbosity = inquire::Confirm::new("Verbose terminal ?")
 			.with_default(false).prompt().unwrap()
 		;
 
@@ -386,27 +380,38 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		store.defaults.cluster_port = num_try.unwrap();
 	}
 
-	println!();
-	println!("path: {:#?}", inst_path);
-	println!("folder: {:#?}", inst_folder);
-	println!("exists: {:#?}", inst_exists);
-	if !inst_exists { println!("parent: {:#?}", inst_parent) };
+	if !inst_exists {
+		std::fs::create_dir_all(&inst_path).unwrap();
+	}
 
-	println!();
-	println!("name: {:#?}", store.name);
-	println!("id: {:#?}", store.id);
-	println!("kind: {:#?}", store.kind);
-	println!("ord: {:#?}", store.ordered);
-	println!("check: {:#?}", store.checksumming);
-	println!("log: {:#?}", store.logging);
+	let store_text = serde_json::to_string_pretty(&store).unwrap();
+	let mut store_manifest = inst_path.clone();
+	store_manifest.push("rixifest.json");
+	std::fs::write(store_manifest, store_text).unwrap();
 
-	println!();
-	println!("def.buff: {:#?}", store.defaults.buffering);
-	println!("def.silent: {:#?}", store.defaults.silent);
-	println!("def.api: {:#?}", store.defaults.api_port);
-	println!("def.api: {:#?}", store.defaults.api_scan);
-	println!("def.clu: {:#?}", store.defaults.cluster_port);
-	println!("def.clu: {:#?}", store.defaults.cluster_scan);
+	// rixindex.bin
+	let mut store_index = inst_path.clone();
+	store_index.push("rixindex.bin");
+
+	let mut store_singles = inst_path.clone();
+	store_singles.push("singletons");
+	std::fs::create_dir_all(&store_singles).unwrap();
+
+	let mut store_colls = inst_path.clone();
+	store_colls.push("collections");
+	std::fs::create_dir_all(&store_colls).unwrap();
+
+	let mut store_checks = inst_path.clone();
+	store_checks.push("checksums");
+	std::fs::create_dir_all(&store_checks).unwrap();
+
+	let mut store_logs = inst_path.clone();
+	store_logs.push("logs");
+	std::fs::create_dir_all(&store_logs).unwrap();
+
+	let mut store_temp = inst_path.clone();
+	store_temp.push("tmp");
+	std::fs::create_dir_all(&store_temp).unwrap();
 
 	return std::process::ExitCode::SUCCESS;
 }
