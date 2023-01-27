@@ -386,20 +386,24 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 	let store_text = serde_json::to_string_pretty(&store).unwrap();
 	let mut store_manifest = inst_path.clone();
-	store_manifest.push("rixifest.json");
+	store_manifest.push("manifest.json");
 	std::fs::write(store_manifest, store_text).unwrap();
-
-	// rixindex.bin
-	let mut store_index = inst_path.clone();
-	store_index.push("rixindex.bin");
 
 	let mut store_singles = inst_path.clone();
 	store_singles.push("singletons");
 	std::fs::create_dir_all(&store_singles).unwrap();
 
+	let mut singles_index = store_singles.clone();
+	singles_index.push("rixindex");
+	std::fs::File::create(singles_index).unwrap();
+
 	let mut store_colls = inst_path.clone();
 	store_colls.push("collections");
 	std::fs::create_dir_all(&store_colls).unwrap();
+
+	let mut colls_index = store_singles;
+	colls_index.push("rixindex");
+	std::fs::File::create(colls_index).unwrap();
 
 	let mut store_checks = inst_path.clone();
 	store_checks.push("checksums");
