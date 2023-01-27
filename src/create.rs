@@ -401,7 +401,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	store_colls.push("collections");
 	std::fs::create_dir_all(&store_colls).unwrap();
 
-	let mut colls_index = store_singles;
+	let mut colls_index = store_colls;
 	colls_index.push("rixindex");
 	std::fs::File::create(colls_index).unwrap();
 
