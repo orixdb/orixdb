@@ -7,6 +7,9 @@ mod create;
 mod serve;
 mod optimize;
 mod upgrade;
+mod check;
+mod archive;
+mod restore;
 mod copy;
 mod convert;
 
@@ -18,6 +21,9 @@ fn main() -> std::process::ExitCode {
 		("serve", serve::main as fn(&ArgMatches) -> std::process::ExitCode),
 		("optimize", optimize::main as fn(&ArgMatches) -> std::process::ExitCode),
 		("upgrade", upgrade::main as fn(&ArgMatches) -> std::process::ExitCode),
+		("check", check::main as fn(&ArgMatches) -> std::process::ExitCode),
+		("archive", archive::main as fn(&ArgMatches) -> std::process::ExitCode),
+		("restore", restore::main as fn(&ArgMatches) -> std::process::ExitCode),
 		("copy", copy::main as fn(&ArgMatches) -> std::process::ExitCode),
 		("convert", convert::main as fn(&ArgMatches) -> std::process::ExitCode)
 	]);
