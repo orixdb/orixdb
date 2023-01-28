@@ -6,7 +6,9 @@ pub struct Conf {
 	pub display_name: String,
 	pub description: String,
 	pub full_description: String,
-	pub version: String,
+	pub major: u16,
+	pub minor: u16,
+	pub patch: u16,
 	pub author: String,
 	pub full_author: String
 }

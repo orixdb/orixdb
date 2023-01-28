@@ -24,7 +24,12 @@ fn main() -> std::process::ExitCode {
 
 	let conf = basics::get_conf();
 	let matches = Command::new(conf.display_name)
-		.version(conf.version)
+		.version(format!(
+			"{}.{}.{}",
+			conf.major.to_string(),
+			conf.minor.to_string(),
+			conf.patch.to_string()
+		))
 		.author(conf.author)
 		.about(conf.description)
 		.subcommand_required(true)

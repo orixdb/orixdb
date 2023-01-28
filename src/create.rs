@@ -32,6 +32,7 @@ enum StoreType {
 struct Store {
 	name: String,
 	id: String,
+	version: String,
 	kind: StoreType,
 	ordering: bool,
 	checksumming: bool,
@@ -81,9 +82,11 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let inst_folder: String;
 	let inst_exists: bool;
 
+	let conf = basics::get_conf();
 	let mut store = Store {
 		name: String::from(""),
 		id: String::from(""),
+		version: format!("{}{}{}", conf.major.to_string(), ".", conf.minor.to_string()),
 		kind: StoreType::Live,
 		ordering: false,
 		checksumming: true,

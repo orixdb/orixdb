@@ -3,7 +3,9 @@
 	"display_name": "OrixDB",
 	"description": "A simple multi-model NoSQL database, queried with GraphQL.",
 	"full_description": "A simple multi-model NoSQL database, queried with GraphQL.\nWritten in Rust for the modern web.",
-	"version": "0.0.1",
+	"major": 0,
+	"minor": 0,
+	"patch": 1,
 	"author": "OrixDB Team <orixdb@gmail.com>",
 	"full_author": "OrixDB Team <orixdb@gmail.com>"
 }
