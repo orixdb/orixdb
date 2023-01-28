@@ -29,16 +29,6 @@ enum StoreType {
 }
 
 #[derive(Serialize)]
-struct Instance {
-	buffering: bool,
-	verbosity: bool,
-	api_port: u16,
-	api_scan: bool,
-	cluster_port: u16,
-	cluster_scan: bool
-}
-
-#[derive(Serialize)]
 struct Store {
 	name: String,
 	id: String,
@@ -46,7 +36,7 @@ struct Store {
 	ordering: bool,
 	checksumming: bool,
 	logging: LogLevel,
-	defaults: Instance
+	defaults: basics::Instance
 }
 
 fn check_id(id: &String) -> bool {
@@ -98,8 +88,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		ordering: false,
 		checksumming: true,
 		logging: LogLevel::Normal,
-		defaults: Instance {
-			buffering: false,
+		defaults: basics::Instance {
 			verbosity: false,
 			api_port: 7900,
 			api_scan: false,
@@ -223,7 +212,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 	if matches.contains_id("name") {
 		store.name = matches.get_one::<String>("name").unwrap().to_string();
-		println!("✔ Store name: {}", store.name);
+			println!("✔ Store name: {}", store.name);
 	}
 	else {
 		store.name = inquire::Text::new("Store name: ")
@@ -289,7 +278,6 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	println!(
 		"\n{}",
 		"Defaults settings for each run OrixDB on this store:\n".to_owned()
-		+ "\x1b[36mBuffering\x1b[0m: \x1b[34m\x1b[1mNo;\x1b[0m "
 		+ "\x1b[36mVerbosity\x1b[0m: \x1b[34m\x1b[1mNo;\x1b[0m "
 		+ "\x1b[36mAPI port\x1b[0m: \x1b[34m\x1b[1m7900...;\x1b[0m "
 		+ "\x1b[36mCluster port\x1b[0m: \x1b[34m\x1b[1m7979...;\x1b[0m"
@@ -298,10 +286,6 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		"Do you want to change them ?"
 	).with_default(false).prompt().unwrap();
 	if change_defaults {
-		store.defaults.buffering = inquire::Confirm::new("Transaction buffering ?")
-			.with_default(false).prompt().unwrap()
-		;
-
 		store.defaults.verbosity = inquire::Confirm::new("Verbose terminal ?")
 			.with_default(false).prompt().unwrap()
 		;

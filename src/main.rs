@@ -86,8 +86,9 @@ fn main() -> std::process::ExitCode {
 					.help("Whether or not the data is ordered during serving.")
 					.long_help("\
 						Whether or not live data ordering is active.\n\
-						When this option is active, the data files are constantly\n\
-						defragmented.
+						When this option is active, the data files\n\
+						are constantly defragmented while keeping\n\
+						the entries in their insertion order.\
 					")
 			)
 			.arg(
@@ -100,9 +101,9 @@ fn main() -> std::process::ExitCode {
 						"Whether or not checksums are used to ensure data integrity."
 					)
 					.long_help("\
-						Whether or not checksums are used to ensure data integrity..\n\
-						When this option is active, checksum files are constantly\n\
-						generated to make sure that the data aren't corrupted.
+						When this option is active, checksum files are\n\
+						constantly generated to make sure that the data\n\
+						aren't corrupted.\
 					")
 			)
 			.arg(
@@ -121,6 +122,41 @@ fn main() -> std::process::ExitCode {
 
 		.subcommand(Command::new("serve")
 			.about("To launch a server for reading and updating a store.")
+			.arg(
+				Arg::new("verbose")
+					.long("verbose")
+					.short('v')
+					.ignore_case(true)
+					.required(false)
+					.help("Whether or not the terminal is verbose.")
+					.long_help("\
+						Whether or not the terminal is verbose.\n\
+						When this option is active, the some logs are\n\
+						printed on the terminal.\
+					")
+			)
+			.arg(
+				Arg::new("api-port")
+					.long("api-port")
+					.short('a')
+					.required(false)
+					.help("The api port for client connections.")
+					.long_help("\
+						The port on which the server listens\n\
+						for client connections.\
+					")
+			)
+			.arg(
+				Arg::new("cluster-port")
+					.long("cluster-port")
+					.short('c')
+					.required(false)
+					.help("The port for intra-cluster connections.")
+					.long_help("\
+						The port on which the server listens\n\
+						for intra-cluster connections.\
+					")
+			)
 		)
 
 		.subcommand(Command::new("optimize")
@@ -140,7 +176,7 @@ fn main() -> std::process::ExitCode {
 		)
 
 		.subcommand(Command::new("restore")
-			.about("To restore a store archive.")
+			.about("To restore an archive or a backup store.")
 		)
 
 		.subcommand(Command::new("copy")

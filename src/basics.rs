@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{ Serialize, Deserialize };
 
 #[derive(Deserialize)]
 pub struct Conf {
@@ -9,6 +9,15 @@ pub struct Conf {
 	pub version: String,
 	pub author: String,
 	pub full_author: String
+}
+
+#[derive(Serialize)]
+pub struct Instance {
+	pub verbosity: bool,
+	pub api_port: u16,
+	pub api_scan: bool,
+	pub cluster_port: u16,
+	pub cluster_scan: bool
 }
 
 pub fn get_conf() -> Conf {
