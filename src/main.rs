@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use clap::{Command, Arg, ArgAction, ArgMatches};
+use clap::{ Command, Arg, ArgAction, ArgMatches };
 
 mod basics;
 mod create;
@@ -129,6 +129,18 @@ fn main() -> std::process::ExitCode {
 
 		.subcommand(Command::new("upgrade")
 			.about("To upgrade a store from a old version to a new one.")
+		)
+
+		.subcommand(Command::new("check")
+			.about("To check if all the data in a store in correct (not corrupted).")
+		)
+
+		.subcommand(Command::new("archive")
+			.about("To create an archive of a store.")
+		)
+
+		.subcommand(Command::new("restore")
+			.about("To restore a store archive.")
 		)
 
 		.subcommand(Command::new("copy")
