@@ -136,6 +136,14 @@ fn main() -> std::process::ExitCode {
 		.subcommand(Command::new("serve")
 			.about("To launch a server for reading and updating a store.")
 			.arg(
+				Arg::new("folder")
+					.required(false)
+					.help("Folder to serve content from.")
+					.long_help("\
+						Folder containing the store to serve content from.\
+					")
+			)
+			.arg(
 				Arg::new("verbose")
 					.long("verbose")
 					.short('v')
