@@ -2,44 +2,9 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
-use serde::Serialize;
 
 use crate::cli;
-use crate::basics;
-
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(Copy)]
-#[derive(Serialize)]
-enum LogLevel {
-	Off,
-	Minimal,
-	Normal,
-	Detailed
-}
-
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(Copy)]
-#[derive(Serialize)]
-enum StoreType {
-	Live,
-	Lite,
-	Backup,
-	Archive
-}
-
-#[derive(Serialize)]
-struct Store {
-	name: String,
-	id: String,
-	version: String,
-	kind: StoreType,
-	ordering: bool,
-	checksumming: bool,
-	logging: LogLevel,
-	defaults: basics::Instance
-}
+use crate::basics::{ self, Instance, LogLevel, StoreType, Store };
 
 fn check_id(id: &String) -> bool {
 	if !id.chars().all(
@@ -92,7 +57,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		ordering: false,
 		checksumming: true,
 		logging: LogLevel::Normal,
-		defaults: basics::Instance {
+		defaults: Instance {
 			verbosity: false,
 			api_port: 7900,
 			api_scan: false,

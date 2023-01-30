@@ -24,9 +24,43 @@ pub struct Instance {
 	pub cluster_scan: bool
 }
 
+#[derive(Debug)]
+#[derive(Clone)]
+#[derive(Copy)]
+#[derive(Serialize)]
+pub enum LogLevel {
+	Off,
+	Minimal,
+	Normal,
+	Detailed
+}
+
+#[derive(Debug)]
+#[derive(Clone)]
+#[derive(Copy)]
+#[derive(Serialize)]
+pub enum StoreType {
+	Live,
+	Lite,
+	Backup,
+	Archive
+}
+
+#[derive(Serialize)]
+pub struct Store {
+	pub name: String,
+	pub id: String,
+	pub version: String,
+	pub kind: StoreType,
+	pub ordering: bool,
+	pub checksumming: bool,
+	pub logging: LogLevel,
+	pub defaults: Instance
+}
+
 pub fn get_conf() -> Conf {
 	let cfg_str = include_str!("config.json");
-	return serde_json::from_str(&cfg_str).unwrap();
+	return serde_json::from_str(cfg_str).unwrap();
 }
 
 pub fn parse_port(port: &String, port_name: &str) -> (u16, bool) {
