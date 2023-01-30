@@ -52,7 +52,8 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let mut store = Store {
 		name: String::from(""),
 		id: String::from(""),
-		version: format!("{}{}{}", conf.major.to_string(), ".", conf.minor.to_string()),
+		major: conf.major,
+		minor: conf.minor,
 		kind: StoreType::Live,
 		ordering: false,
 		checksumming: true,

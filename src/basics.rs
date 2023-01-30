@@ -15,7 +15,7 @@ pub struct Conf {
 	pub full_author: String
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Instance {
 	pub verbosity: bool,
 	pub api_port: u16,
@@ -25,9 +25,8 @@ pub struct Instance {
 }
 
 #[derive(Debug)]
-#[derive(Clone)]
-#[derive(Copy)]
-#[derive(Serialize)]
+#[derive(Clone, Copy)]
+#[derive(Serialize, Deserialize)]
 pub enum LogLevel {
 	Off,
 	Minimal,
@@ -36,9 +35,9 @@ pub enum LogLevel {
 }
 
 #[derive(Debug)]
-#[derive(Clone)]
-#[derive(Copy)]
-#[derive(Serialize)]
+#[derive(Clone, Copy)]
+#[derive(PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub enum StoreType {
 	Live,
 	Lite,
@@ -46,11 +45,12 @@ pub enum StoreType {
 	Archive
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Store {
 	pub name: String,
 	pub id: String,
-	pub version: String,
+	pub major: u16,
+	pub minor: u16,
 	pub kind: StoreType,
 	pub ordering: bool,
 	pub checksumming: bool,
