@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use clap::{ Command, Arg, ArgAction, ArgMatches };
 
+mod cli;
 mod basics;
+
 mod create;
 mod serve;
 mod optimize;
@@ -137,7 +139,7 @@ fn main() -> std::process::ExitCode {
 				Arg::new("verbose")
 					.long("verbose")
 					.short('v')
-					.ignore_case(true)
+					.action(ArgAction::SetTrue)
 					.required(false)
 					.help("Whether or not the terminal is verbose.")
 					.long_help("\

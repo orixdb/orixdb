@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use clap::ArgMatches;
 use serde::Serialize;
 
+use crate::cli;
 use crate::basics;
 
 #[derive(Debug)]
@@ -48,7 +49,7 @@ fn check_id(id: &String) -> bool {
 			|| "-_".contains(c)
 		}
 	) {
-		basics::red_err(
+		cli::red_err(
 			"The store id must contain only lowercase\n".to_owned()
 			+ "alphanumeric characters, dashes and underscores."
 		);
@@ -116,7 +117,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		;
 		let mut inst_temp = PathBuf::from(folder);
 		if inst_temp.is_file() {
-			basics::red_err(
+			cli::red_err(
 				"The installation path resolves to a file.\n".to_owned()
 				+ "A new store can't be set in a file but in a directory."
 			);
@@ -125,7 +126,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		if inst_temp.is_dir() {
 			let is_empty = inst_temp.read_dir().unwrap().next().is_none();
 			if !is_empty {
-				basics::red_err(
+				cli::red_err(
 					"The installation folder is not empty.\n".to_owned()
 					+ "Then a new store can't be set there."
 				);
@@ -144,7 +145,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 			let temp_parent = inst_temp.parent().unwrap();
 			if temp_parent.is_file() {
-				basics::red_err(
+				cli::red_err(
 					"The path: \"".to_owned()
 					+ temp_parent.to_str().unwrap()
 					+ "\" resolves to a file.\n"
@@ -165,7 +166,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		inst_path = std::env::current_dir().unwrap();
 		let is_empty = inst_path.read_dir().unwrap().next().is_none();
 		if !is_empty {
-			basics::red_err(
+			cli::red_err(
 				"The current folder is not empty.\n".to_owned()
 				+ "Then a new store can't be set here.\n"
 				+ "You can specify another installation folder as argument."
@@ -188,9 +189,9 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			.unwrap().to_string()
 			;
 		if !store_type_options.contains_key(&*store_type) {
-			basics::red_err(
+			cli::red_err(
 				"The store type must have one of the ".to_owned()
-					+ "authorized values.\n(Try: `orixdb help create` to know more...)"
+				+ "authorized values.\n(Try: `orixdb help create` to know more...)"
 			);
 			return std::process::ExitCode::FAILURE;
 		}
@@ -202,9 +203,9 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			.unwrap().to_string()
 		;
 		if !log_level_options.contains_key(&*store_logging) {
-			basics::red_err(
+			cli::red_err(
 				"The store logging mode must have one of the ".to_owned()
-					+ "authorized values.\n(Try: `orixdb help create` to know more...)"
+				+ "authorized values.\n(Try: `orixdb help create` to know more...)"
 			);
 			return std::process::ExitCode::FAILURE;
 		}
@@ -310,7 +311,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 				ellipsis.len() < 1 ||
 				! ellipsis.chars().all(|c: char| c == '.')
 			{
-				basics::red_err(
+				cli::red_err(
 					"The ellipsis must contain two or more periods.\n".to_owned()
 					+ "And nothing else. (Ex: 5500...)"
 				);
@@ -324,7 +325,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		num_try = number.parse::<u16>();
 		test_0 = num_try.clone();
 		if num_try.is_err() || test_0.unwrap() == 0 {
-			basics::red_err(
+			cli::red_err(
 				"The API port must be a valid number between 1 and 65535, ".to_owned()
 				+ "with an optional ellipsis at the end. (Ex: 5500...)"
 			);
@@ -344,7 +345,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 				ellipsis.len() < 1 ||
 				! ellipsis.chars().all(|c: char| c == '.')
 			{
-				basics::red_err(
+				cli::red_err(
 					"The ellipsis must contain two or more periods.\n".to_owned()
 						+ "And nothing else. (Ex: 5500...)"
 				);
@@ -358,7 +359,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		num_try = number.parse::<u16>();
 		test_0 = num_try.clone();
 		if num_try.is_err() || test_0.unwrap() == 0 {
-			basics::red_err(
+			cli::red_err(
 				"The cluster port must be a valid number between 1 and 65535, ".to_owned()
 				+ "with an optional ellipsis at the end. (Ex: 5500...)"
 			);
