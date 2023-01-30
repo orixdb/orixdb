@@ -28,3 +28,42 @@ pub fn get_conf() -> Conf {
 	let cfg_str = include_str!("config.json");
 	return serde_json::from_str(&cfg_str).unwrap();
 }
+
+pub fn parse_port(port: &String, port_name: &str) -> (u16, bool) {
+	let number_str;
+	let ellipsis_str;
+	let number;
+	let test_0;
+	let ellipsis;
+	if port.find(".").is_some() {
+		(number_str, ellipsis_str) = port.split_once(".").unwrap();
+		if
+			ellipsis_str.len() < 1 ||
+			! ellipsis_str.chars().all(|c: char| c == '.')
+		{
+			cli::red_err(
+				"The ".to_owned() + port_name
+				+ " ellipsis must contain two or more periods.\n"
+				+ "And nothing else. (Ex: 5500...)"
+			);
+			return (0, false);
+		}
+		ellipsis = true;
+	}
+	else {
+		ellipsis = false;
+		number_str = &*port;
+	}
+	number = number_str.parse::<u16>();
+	test_0 = number.clone();
+	if number.is_err() || test_0.unwrap() == 0 {
+		cli::red_err(
+			"The ".to_owned() + port_name
+			+ " port must be a valid number between 1 and 65535, "
+			+ "with an optional ellipsis at the end. (Ex: 5500...)"
+		);
+		return (0, false);
+	}
+
+	return (number.unwrap(), ellipsis);
+}
