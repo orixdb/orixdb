@@ -260,78 +260,30 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			.with_default(false).prompt().unwrap()
 		;
 
-		let mut number;
-		let mut ellipsis;
-		let mut num_try;
-		let mut test_0;
+		let mut port_text: String;
+		let mut port_digest: (u16, bool);
 
-		let api_port = inquire::Text::new("Default API port:")
+		port_text = inquire::Text::new("Default API port:")
 			.with_help_message("\
 				You can add an ellipsis (Ex: 5500...) to allow port scanning, starting\n\
 				from the given number, in case the the port is not free.\
 			").with_default("7900...").prompt().unwrap()
 		;
-		if api_port.find(".").is_some() {
-			(number, ellipsis) = api_port.split_once(".").unwrap();
-			if
-				ellipsis.len() < 1 ||
-				! ellipsis.chars().all(|c: char| c == '.')
-			{
-				cli::red_err(
-					"The ellipsis must contain two or more periods.\n".to_owned()
-					+ "And nothing else. (Ex: 5500...)"
-				);
-				return std::process::ExitCode::FAILURE;
-			}
-			store.defaults.api_scan = true;
-		}
-		else {
-			number = &*api_port;
-		}
-		num_try = number.parse::<u16>();
-		test_0 = num_try.clone();
-		if num_try.is_err() || test_0.unwrap() == 0 {
-			cli::red_err(
-				"The API port must be a valid number between 1 and 65535, ".to_owned()
-				+ "with an optional ellipsis at the end. (Ex: 5500...)"
-			);
-			return std::process::ExitCode::FAILURE;
-		}
-		store.defaults.api_port = num_try.unwrap();
+		port_digest = basics::parse_port(&port_text, "API");
+		if port_digest.0 == 0 { return std::process::ExitCode::FAILURE; }
+		store.defaults.api_port = port_digest.0;
+		store.defaults.api_scan = port_digest.1;
 
-		let cluster_port = inquire::Text::new("Default cluster port:")
+		port_text = inquire::Text::new("Default cluster port:")
 			.with_help_message("\
 				You can add an ellipsis (Ex: 5500...) to allow port scanning, starting\n\
 				from the given number, in case the the port is not free.\
 			").with_default("7979...").prompt().unwrap()
-			;
-		if cluster_port.find(".").is_some() {
-			(number, ellipsis) = cluster_port.split_once(".").unwrap();
-			if
-				ellipsis.len() < 1 ||
-				! ellipsis.chars().all(|c: char| c == '.')
-			{
-				cli::red_err(
-					"The ellipsis must contain two or more periods.\n".to_owned()
-						+ "And nothing else. (Ex: 5500...)"
-				);
-				return std::process::ExitCode::FAILURE;
-			}
-			store.defaults.cluster_scan = true;
-		}
-		else {
-			number = &*cluster_port;
-		}
-		num_try = number.parse::<u16>();
-		test_0 = num_try.clone();
-		if num_try.is_err() || test_0.unwrap() == 0 {
-			cli::red_err(
-				"The cluster port must be a valid number between 1 and 65535, ".to_owned()
-				+ "with an optional ellipsis at the end. (Ex: 5500...)"
-			);
-			return std::process::ExitCode::FAILURE;
-		}
-		store.defaults.cluster_port = num_try.unwrap();
+		;
+		port_digest = basics::parse_port(&port_text, "cluster");
+		if port_digest.0 == 0 { return std::process::ExitCode::FAILURE; }
+		store.defaults.cluster_port = port_digest.0;
+		store.defaults.cluster_scan = port_digest.1;
 	}
 
 	if !inst_exists {
