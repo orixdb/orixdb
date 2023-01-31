@@ -4,8 +4,7 @@ use std::path::PathBuf;
 use clap::ArgMatches;
 
 use crate::cli;
-use crate::basics;
-use crate::basics::StoreType::{Archive, Backup};
+use crate::basics::{ self, StoreType };
 
 pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
@@ -16,7 +15,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	// --> Setting important variables
 	//--------------------------------
 
-	let conf = basics::get_conf();
+	let conf = basics::get_conf(); // global settings
 	let store_dir: PathBuf; // Store's directory
 	let store:  basics::Store; // Store's manifest
 	let api_port: u16; // Port number for client connections
@@ -77,7 +76,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	store = store_manifest_try.unwrap();
 
 	// Checking if the store's type allows data serving
-	if store.kind == Backup || store.kind == Archive {
+	if store.kind == StoreType::Backup || store.kind == StoreType::Archive {
 		cli::red_err(
 			"A backup or an archive store can't be served.".to_owned()
 		);
