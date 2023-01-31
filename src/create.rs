@@ -45,7 +45,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	;
 
 	let mut inst_path: PathBuf;
-	let inst_folder: String;
+	let inst_dir: String;
 	let inst_exists: bool;
 
 	let conf = basics::get_conf();
@@ -77,11 +77,11 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	");
 	println!("Welcome ! You are going to create a new OrixDB store.\n");
 
-	if matches.contains_id("folder") {
-		let folder = matches.get_one::<String>("folder")
+	if matches.contains_id("directory") {
+		let directory = matches.get_one::<String>("directory")
 			.unwrap()
 		;
-		let mut inst_temp = PathBuf::from(folder);
+		let mut inst_temp = PathBuf::from(directory);
 		if inst_temp.is_file() {
 			cli::red_err(
 				"The installation path resolves to a file.\n".to_owned()
@@ -93,20 +93,20 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			let is_empty = inst_temp.read_dir().unwrap().next().is_none();
 			if !is_empty {
 				cli::red_err(
-					"The installation folder is not empty.\n".to_owned()
+					"The installation directory is not empty.\n".to_owned()
 					+ "Then a new store can't be set there."
 				);
 				return std::process::ExitCode::FAILURE;
 			}
 			inst_path = inst_temp.canonicalize().unwrap();
-			inst_folder = inst_path.file_name().unwrap()
+			inst_dir = inst_path.file_name().unwrap()
 				.to_os_string().into_string().unwrap()
 			;
 			inst_exists = true;
 		}
 		else {
 			if inst_temp.is_relative() {
-				inst_temp = PathBuf::from("./".to_owned() + folder);
+				inst_temp = PathBuf::from("./".to_owned() + directory);
 			}
 
 			let temp_parent = inst_temp.parent().unwrap();
@@ -121,10 +121,10 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			}
 
 			inst_path = temp_parent.to_path_buf();
-			inst_folder = inst_temp.file_name().unwrap()
+			inst_dir = inst_temp.file_name().unwrap()
 				.to_os_string().into_string().unwrap()
 			;
-			inst_path.push(&inst_folder);
+			inst_path.push(&inst_dir);
 			inst_exists = false;
 		}
 	}
@@ -133,13 +133,13 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		let is_empty = inst_path.read_dir().unwrap().next().is_none();
 		if !is_empty {
 			cli::red_err(
-				"The current folder is not empty.\n".to_owned()
+				"The current directory is not empty.\n".to_owned()
 				+ "Then a new store can't be set here.\n"
-				+ "You can specify another installation folder as argument."
+				+ "You can specify another installation directory as argument."
 			);
 			return std::process::ExitCode::FAILURE;
 		}
-		inst_folder = inst_path.file_name().unwrap()
+		inst_dir = inst_path.file_name().unwrap()
 			.to_os_string().into_string().unwrap()
 		;
 		inst_exists = true;
@@ -186,7 +186,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	}
 	else {
 		store.name = inquire::Text::new("Store name: ")
-			.with_default(&*inst_folder).prompt().unwrap()
+			.with_default(&*inst_dir).prompt().unwrap()
 		;
 	}
 

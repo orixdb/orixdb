@@ -45,7 +45,7 @@ fn main() -> std::process::ExitCode {
 		.subcommand(Command::new("create")
 			.about("To create a new OrixDB store.")
 			.arg(
-				Arg::new("folder")
+				Arg::new("directory")
 					.required(false)
 					.help("Folder to create for the new store.")
 					.long_help("\
@@ -136,7 +136,7 @@ fn main() -> std::process::ExitCode {
 		.subcommand(Command::new("serve")
 			.about("To launch a server for reading and updating a store.")
 			.arg(
-				Arg::new("folder")
+				Arg::new("directory")
 					.required(false)
 					.help("Folder to serve content from.")
 					.long_help("\
