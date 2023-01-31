@@ -247,7 +247,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 	println!(
 		"\n{}",
-		"Defaults settings for each run OrixDB on this store:\n".to_owned()
+		"Defaults settings for each run of OrixDB on this store:\n".to_owned()
 		+ "\x1b[36mVerbosity\x1b[0m: \x1b[34m\x1b[1mNo;\x1b[0m "
 		+ "\x1b[36mAPI port\x1b[0m: \x1b[34m\x1b[1m7900...;\x1b[0m "
 		+ "\x1b[36mCluster port\x1b[0m: \x1b[34m\x1b[1m7979...;\x1b[0m"
@@ -286,42 +286,97 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		store.defaults.cluster_scan = port_digest.1;
 	}
 
+	let mut try_fs: std::io::Result<()>;
+	let mut try_fs_file: std::io::Result<std::fs::File>;
+
+	fn more_errors() {
+		cli::red_err(
+			"Failed to create some resources.\n".to_owned()
+				+ "Do you have a write permission in the store directory ?\n"
+				+ "Exiting..."
+		);
+	}
+
 	if !inst_exists {
-		std::fs::create_dir_all(&inst_path).unwrap();
+		try_fs = std::fs::create_dir_all(&inst_path);
+		if try_fs.is_err() {
+			cli::red_err(
+				"Failed to create the store's directory.\n".to_owned()
+				+ "Do you have a write permission in the parent directory ?\n"
+				+ "Exiting..."
+			);
+			return std::process::ExitCode::FAILURE;
+		}
 	}
 
 	let store_text = serde_json::to_string_pretty(&store).unwrap();
 	let mut store_manifest = inst_path.clone();
 	store_manifest.push("manifest.json");
-	std::fs::write(store_manifest, store_text).unwrap();
+	try_fs = std::fs::write(store_manifest, store_text);
+	if try_fs.is_err() {
+		cli::red_err(
+			"Failed to create the manifest.\n".to_owned()
+			+ "Do you have a write permission in the store directory ?\n"
+			+ "Exiting..."
+		);
+		return std::process::ExitCode::FAILURE;
+	}
 
 	let mut store_singles = inst_path.clone();
 	store_singles.push("singletons");
-	std::fs::create_dir_all(&store_singles).unwrap();
+	try_fs = std::fs::create_dir_all(&store_singles);
+	if try_fs.is_err() {
+		more_errors();
+		return std::process::ExitCode::FAILURE;
+	}
 
 	let mut singles_index = store_singles.clone();
 	singles_index.push("rixindex");
-	std::fs::File::create(singles_index).unwrap();
+	try_fs_file = std::fs::File::create(singles_index);
+	if try_fs_file.is_err() {
+		more_errors();
+		return std::process::ExitCode::FAILURE;
+	}
 
 	let mut store_colls = inst_path.clone();
 	store_colls.push("collections");
-	std::fs::create_dir_all(&store_colls).unwrap();
+	try_fs = std::fs::create_dir_all(&store_colls);
+	if try_fs.is_err() {
+		more_errors();
+		return std::process::ExitCode::FAILURE;
+	}
 
 	let mut colls_index = store_colls;
 	colls_index.push("rixindex");
-	std::fs::File::create(colls_index).unwrap();
+	try_fs_file = std::fs::File::create(colls_index);
+	if try_fs_file.is_err() {
+		more_errors();
+		return std::process::ExitCode::FAILURE;
+	}
 
 	let mut store_checks = inst_path.clone();
 	store_checks.push("checksums");
-	std::fs::create_dir_all(&store_checks).unwrap();
+	try_fs = std::fs::create_dir_all(&store_checks);
+	if try_fs.is_err() {
+		more_errors();
+		return std::process::ExitCode::FAILURE;
+	}
 
 	let mut store_logs = inst_path.clone();
 	store_logs.push("logs");
-	std::fs::create_dir_all(&store_logs).unwrap();
+	try_fs = std::fs::create_dir_all(&store_logs);
+	if try_fs.is_err() {
+		more_errors();
+		return std::process::ExitCode::FAILURE;
+	}
 
 	let mut store_temp = inst_path.clone();
 	store_temp.push("tmp");
-	std::fs::create_dir_all(&store_temp).unwrap();
+	try_fs = std::fs::create_dir_all(&store_temp);
+	if try_fs.is_err() {
+		more_errors();
+		return std::process::ExitCode::FAILURE;
+	}
 
 	return std::process::ExitCode::SUCCESS;
 }
