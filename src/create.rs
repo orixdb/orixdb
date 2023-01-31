@@ -44,9 +44,9 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		.keys().cloned().collect::<Vec<&str>>()
 	;
 
-	let mut inst_path: PathBuf;
-	let inst_dir: String;
-	let inst_exists: bool;
+	let mut store_path: PathBuf;
+	let store_dir: String;
+	let store_exists: bool;
 
 	let conf = basics::get_conf();
 	let mut store = Store {
@@ -81,35 +81,35 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		let directory = matches.get_one::<String>("directory")
 			.unwrap()
 		;
-		let mut inst_temp = PathBuf::from(directory);
-		if inst_temp.is_file() {
+		let mut store_temp = PathBuf::from(directory);
+		if store_temp.is_file() {
 			cli::red_err(
-				"The installation path resolves to a file.\n".to_owned()
+				"The store path resolves to a file.\n".to_owned()
 				+ "A new store can't be set in a file but in a directory."
 			);
 			return std::process::ExitCode::FAILURE;
 		}
-		if inst_temp.is_dir() {
-			let is_empty = inst_temp.read_dir().unwrap().next().is_none();
+		if store_temp.is_dir() {
+			let is_empty = store_temp.read_dir().unwrap().next().is_none();
 			if !is_empty {
 				cli::red_err(
-					"The installation directory is not empty.\n".to_owned()
+					"The store directory is not empty.\n".to_owned()
 					+ "Then a new store can't be set there."
 				);
 				return std::process::ExitCode::FAILURE;
 			}
-			inst_path = inst_temp.canonicalize().unwrap();
-			inst_dir = inst_path.file_name().unwrap()
+			store_path = store_temp.canonicalize().unwrap();
+			store_dir = store_path.file_name().unwrap()
 				.to_os_string().into_string().unwrap()
 			;
-			inst_exists = true;
+			store_exists = true;
 		}
 		else {
-			if inst_temp.is_relative() {
-				inst_temp = PathBuf::from("./".to_owned() + directory);
+			if store_temp.is_relative() {
+				store_temp = PathBuf::from("./".to_owned() + directory);
 			}
 
-			let temp_parent = inst_temp.parent().unwrap();
+			let temp_parent = store_temp.parent().unwrap();
 			if temp_parent.is_file() {
 				cli::red_err(
 					"The path: \"".to_owned()
@@ -120,29 +120,29 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 				return std::process::ExitCode::FAILURE;
 			}
 
-			inst_path = temp_parent.to_path_buf();
-			inst_dir = inst_temp.file_name().unwrap()
+			store_path = temp_parent.to_path_buf();
+			store_dir = store_temp.file_name().unwrap()
 				.to_os_string().into_string().unwrap()
 			;
-			inst_path.push(&inst_dir);
-			inst_exists = false;
+			store_path.push(&store_dir);
+			store_exists = false;
 		}
 	}
 	else {
-		inst_path = std::env::current_dir().unwrap();
-		let is_empty = inst_path.read_dir().unwrap().next().is_none();
+		store_path = std::env::current_dir().unwrap();
+		let is_empty = store_path.read_dir().unwrap().next().is_none();
 		if !is_empty {
 			cli::red_err(
 				"The current directory is not empty.\n".to_owned()
 				+ "Then a new store can't be set here.\n"
-				+ "You can specify another installation directory as argument."
+				+ "You can specify another store directory as argument."
 			);
 			return std::process::ExitCode::FAILURE;
 		}
-		inst_dir = inst_path.file_name().unwrap()
+		store_dir = store_path.file_name().unwrap()
 			.to_os_string().into_string().unwrap()
 		;
-		inst_exists = true;
+		store_exists = true;
 	}
 
 	if matches.contains_id("id") {
@@ -178,7 +178,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		store.logging = log_level_options[&*store_logging];
 	}
 
-	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", inst_path.display());
+	println!("✔ Store location: \x1b[2m\x1b[36m{}\x1b[0m", store_path.display());
 
 	if matches.contains_id("name") {
 		store.name = matches.get_one::<String>("name").unwrap().to_string();
@@ -186,7 +186,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	}
 	else {
 		store.name = inquire::Text::new("Store name: ")
-			.with_default(&*inst_dir).prompt().unwrap()
+			.with_default(&*store_dir).prompt().unwrap()
 		;
 	}
 
@@ -297,8 +297,8 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		);
 	}
 
-	if !inst_exists {
-		try_fs = std::fs::create_dir_all(&inst_path);
+	if !store_exists {
+		try_fs = std::fs::create_dir_all(&store_path);
 		if try_fs.is_err() {
 			cli::red_err(
 				"Failed to create the store's directory.\n".to_owned()
@@ -310,7 +310,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	}
 
 	let store_text = serde_json::to_string_pretty(&store).unwrap();
-	let mut store_manifest = inst_path.clone();
+	let mut store_manifest = store_path.clone();
 	store_manifest.push("manifest.json");
 	try_fs = std::fs::write(store_manifest, store_text);
 	if try_fs.is_err() {
@@ -322,7 +322,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		return std::process::ExitCode::FAILURE;
 	}
 
-	let mut store_singles = inst_path.clone();
+	let mut store_singles = store_path.clone();
 	store_singles.push("singletons");
 	try_fs = std::fs::create_dir_all(&store_singles);
 	if try_fs.is_err() {
@@ -338,7 +338,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		return std::process::ExitCode::FAILURE;
 	}
 
-	let mut store_colls = inst_path.clone();
+	let mut store_colls = store_path.clone();
 	store_colls.push("collections");
 	try_fs = std::fs::create_dir_all(&store_colls);
 	if try_fs.is_err() {
@@ -354,7 +354,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		return std::process::ExitCode::FAILURE;
 	}
 
-	let mut store_checks = inst_path.clone();
+	let mut store_checks = store_path.clone();
 	store_checks.push("checksums");
 	try_fs = std::fs::create_dir_all(&store_checks);
 	if try_fs.is_err() {
@@ -362,7 +362,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		return std::process::ExitCode::FAILURE;
 	}
 
-	let mut store_logs = inst_path.clone();
+	let mut store_logs = store_path.clone();
 	store_logs.push("logs");
 	try_fs = std::fs::create_dir_all(&store_logs);
 	if try_fs.is_err() {
@@ -370,7 +370,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		return std::process::ExitCode::FAILURE;
 	}
 
-	let mut store_temp = inst_path.clone();
+	let mut store_temp = store_path.clone();
 	store_temp.push("tmp");
 	try_fs = std::fs::create_dir_all(&store_temp);
 	if try_fs.is_err() {
