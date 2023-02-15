@@ -6,6 +6,8 @@
 	"major": 0,
 	"minor": 0,
 	"patch": 1,
-	"author": "OrixDB Team <orixdb@gmail.com>",
-	"full_author": "OrixDB Team <orixdb@gmail.com>"
+	"author": "OrixDB Team",
+	"full_author": "OrixDB Team <orixdb@gmail.com>",
+	"max_object_size": 68719476736,
+	"max_file_size": 1099511627776
 }

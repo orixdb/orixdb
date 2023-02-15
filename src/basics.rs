@@ -12,7 +12,9 @@ pub struct Conf {
 	pub minor: u16,
 	pub patch: u16,
 	pub author: String,
-	pub full_author: String
+	pub full_author: String,
+	pub max_object_size: u64,
+	pub max_file_size: u64
 }
 
 #[derive(Serialize, Deserialize)]
@@ -49,6 +51,7 @@ pub enum StoreType {
 pub struct Store {
 	pub name: String,
 	pub id: String,
+	pub hash: String,
 	pub major: u16,
 	pub minor: u16,
 	pub kind: StoreType,

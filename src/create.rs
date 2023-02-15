@@ -52,6 +52,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let mut store = Store {
 		name: String::from(""),
 		id: String::from(""),
+		hash: String::from(""),
 		major: conf.major,
 		minor: conf.minor,
 		kind: StoreType::Live,
@@ -292,8 +293,8 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	fn more_errors() {
 		cli::red_err(
 			"Failed to create some resources.\n".to_owned()
-				+ "Do you have a write permission in the store directory ?\n"
-				+ "Exiting..."
+			+ "Do you have a write permission in the store directory ?\n"
+			+ "Exiting..."
 		);
 	}
 

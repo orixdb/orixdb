@@ -1,10 +1,25 @@
 use std::fs;
 use std::path::PathBuf;
+use  std::collections::HashMap;
+use std::io::{self, BufRead, Read, Seek, SeekFrom};
 
 use clap::ArgMatches;
 
 use crate::cli;
 use crate::basics::{ self, StoreType };
+
+#[derive(Debug)]
+struct SingletonMeta {
+	id: [u8; 12],
+	file: [u8; 12],
+	index: u64,
+	data_length: u64
+}
+
+struct Collection {
+	name: String,
+	display_name: String
+}
 
 pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
@@ -13,9 +28,9 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 
 	// --> Setting important variables
-	//--------------------------------
+	// -------------------------------
 
-	let conf = basics::get_conf(); // global settings
+	let conf = basics::get_conf(); // Global settings
 	let store_dir: PathBuf; // Store's directory
 	let store:  basics::Store; // Store's manifest
 	let api_port: u16; // Port number for client connections
@@ -24,16 +39,46 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let cluster_port_scan: bool; // Port scanning toggle for API connection
 	let verbose: bool; // Whether or not the terminal is verbose
 
+	// Map relating each singleton id to its location
+	let mut singletons =
+		HashMap::<[u8; 12], ([u8; 12], u64, u64)>::new()
+	;
+	// Map relating each hole location in singletons, to its size
+	let mut singletons_holes = HashMap::<(String, u64), u64>::new();
+
+	// Map relating each Collection to its metadata
+	let mut collections_meta = HashMap::<String, Collection>::new();
+	// Map relating each collection item id to its location
+	let mut collections = HashMap::<
+		String, HashMap<String, (String, u64)>
+	>::new();
+	// Map relating each hole location in collections, to its size
+	let mut collections_holes = HashMap::<
+		String, HashMap<(String, u64), u64>
+	>::new();
+
 	let mut store_item: PathBuf; // A `pathbuf` to index resources in the store
 	let store_text_content: String; // A String to store their content
+	let mut store_file_length: u64;
+	let mut store_file_handle: io::BufReader<fs::File>;
+	let mut store_bin_content = Vec::<u8>::new();
+	let mut store_try: io::Result<usize>;
+	let mut store_read_err: String;
+	let mut store_str_draft: Vec<u8>;
+	let mut store_singleton_meta = SingletonMeta {
+		id: [0u8; 12],
+		file: [0u8; 12],
+		index: 0,
+		data_length: 0
+	};
 
 
 	// --> Checking and loading the store and its manifest
-	//----------------------------------------------------
+	// ---------------------------------------------------
 
 	// Checking if the supplied directory exists
-	if matches.contains_id("folder") {
-		store_dir = PathBuf::from(matches.get_one::<String>("folder").unwrap());
+	if matches.contains_id("directory") {
+		store_dir = PathBuf::from(matches.get_one::<String>("directory").unwrap());
 
 		if !store_dir.exists() {
 			cli::red_err(
@@ -42,7 +87,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			return std::process::ExitCode::FAILURE;
 		}
 	}
-	else { store_dir = PathBuf::from("."); }
+	else { store_dir = PathBuf::from(".").canonicalize().unwrap(); }
 
 	// Checking and loading the manifest
 	store_item  = store_dir.clone();
@@ -126,7 +171,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 
 	// --> Checking and loading the command line arguments
-	//----------------------------------------------------
+	// ---------------------------------------------------
 
 	// Setting the terminal verbosity
 	verbose = *matches.get_one::<bool>("verbose").unwrap();
