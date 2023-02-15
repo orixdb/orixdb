@@ -205,11 +205,76 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		cluster_port_scan = store.defaults.cluster_scan;
 	}
 
-	println!("{}", api_port);
-	println!("{}", api_port_scan);
-	println!("{}", cluster_port);
-	println!("{}", cluster_port_scan);
-	println!("{:?}", store_dir);
-	println!("{}", verbose);
+
+	// --> Loading the index of the singletons
+	// ---------------------------------------
+
+	store_item = store_dir.clone();
+	store_item.push("singletons/rixindex");
+	if !store_item.exists() {
+		cli::red_err(
+			"The file: \"".to_owned()
+				+ store_item.to_str().unwrap()
+				+ "\" was not found !"
+		);
+		return std::process::ExitCode::FAILURE;
+	}
+	store_file_length = store_item.metadata().unwrap().len();
+	store_file_handle = io::BufReader::new(fs::File::open(&store_item)
+		.unwrap()
+	);
+
+	store_file_handle.read_to_end(&mut store_bin_content).unwrap();
+	let aa = &store_bin_content[0..5];
+	println!("{:?}", aa);
+	store_bin_content.clear();
+	store_file_handle.seek(io::SeekFrom::Start(0)).unwrap();
+	println!("{} - {}\n\n", store_bin_content.len(), store_bin_content.capacity());
+	// ----------------------------------------------------------------
+
+	store_read_err = format!(
+		"Failed to load the content of: \"{:?}\"",
+		store_item
+	);
+	store_bin_content.resize(12, 0);
+	while store_file_handle.stream_position().unwrap() < store_file_length {
+		store_try = store_file_handle.read(&mut store_singleton_meta.id[0..12]);
+		if store_try.is_err() {
+			cli::red_err(store_read_err);
+			return std::process::ExitCode::FAILURE;
+		}
+
+		store_try = store_file_handle.read(&mut store_singleton_meta.file[0..12]);
+		if store_try.is_err() {
+			cli::red_err(store_read_err);
+			return std::process::ExitCode::FAILURE;
+		}
+
+		store_file_handle.seek(SeekFrom::Current(16)).unwrap();
+
+		// store_try = store_file_handle.read(&mut store_bin_content[0..8]);
+		// if store_try.is_err() {
+		// 	cli::red_err(store_read_err);
+		// 	return std::process::ExitCode::FAILURE;
+		// }
+		// // store_file_handle.read_until()
+		//
+		// store_try = store_file_handle.read(&mut store_bin_content[0..8]);
+		// if store_try.is_err() {
+		// 	cli::red_err(store_read_err);
+		// 	return std::process::ExitCode::FAILURE;
+		// }
+
+		singletons.insert(
+			store_singleton_meta.id,
+			(
+				store_singleton_meta.file,
+				store_singleton_meta.index,
+				store_singleton_meta.data_length
+			)
+		);
+	}
+	println!("{:#?}", singletons);
+
 	return std::process::ExitCode::SUCCESS;
 }
