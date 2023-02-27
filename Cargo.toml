@@ -15,3 +15,4 @@ serde_json = "1"
 clap = {version = "4", features = ["string"]}
 inquire = "0"
 slug = "0"
+byteorder = "1.4.3"
