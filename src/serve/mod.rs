@@ -3,16 +3,17 @@ use std::path::PathBuf;
 use  std::collections::HashMap;
 use std::io::{self, Read, Seek, SeekFrom};
 
-use crate::cli;
 use clap::ArgMatches;
 use byteorder::{ ReadBytesExt, BigEndian };
 
+use crate::cli;
 use crate::basics::{ self, StoreType };
 
 #[derive(Debug)]
 struct SingletonMeta {
-	id: [u8; 12],
-	file: [u8; 12],
+	id: String,
+	name: String,
+	file: String,
 	index: u64,
 	data_length: u64
 }
@@ -42,7 +43,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 	// Map relating each singleton id to its location
 	let mut singletons =
-		HashMap::<[u8; 12], ([u8; 12], u64, u64)>::new()
+		HashMap::<String, (String, String, u64, u64)>::new()
 	;
 	// Map relating each hole location in singletons, to its size
 	let mut singletons_holes = HashMap::<(String, u64), u64>::new();
@@ -61,15 +62,18 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let mut store_item: PathBuf; // A `pathbuf` to index resources in the store
 	let store_text_content: String; // A String to store their content
 	let mut store_file_length: u64;
+	let mut store_str_length: u8;
 	let mut store_file_handle: io::BufReader<fs::File>;
 	let mut store_bin_content = Vec::<u8>::new();
 	let mut io_read_try: io::Result<usize>;
+	let mut bo_read8_try: io::Result<u8>;
 	let mut bo_read_try: io::Result<u64>;
 	let mut store_read_err: String;
 	let mut store_str_draft: Vec<u8>;
 	let mut store_singleton_meta = SingletonMeta {
-		id: [0u8; 12],
-		file: [0u8; 12],
+		id: String::new(),
+		name: String::new(),
+		file: String::new(),
 		index: 0,
 		data_length: 0
 	};
@@ -227,39 +231,65 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	);
 
 	store_read_err = format!(
-		"Failed to load the content of: \"{:?}\"",
+		"Failed to load the content of: {:?}",
 		store_item
 	);
-	// store_bin_content.resize(12, 0);
+	store_bin_content.resize(12, 0);
 	while store_file_handle.stream_position().unwrap() < store_file_length {
-		io_read_try = store_file_handle.read(&mut store_singleton_meta.id[0..12]);
-		if io_read_try.is_err() {
+		bo_read8_try = store_file_handle.read_u8();
+		if bo_read8_try.is_err() {
 			cli::red_err(store_read_err);
 			return std::process::ExitCode::FAILURE;
 		}
+		store_str_length = bo_read8_try.unwrap();
 
-		io_read_try = store_file_handle.read(&mut store_singleton_meta.file[0..12]);
+		if store_bin_content.len() < store_str_length as usize {
+			store_bin_content.resize(store_str_length as usize, 0);
+		}
+		io_read_try = store_file_handle.read(
+			&mut store_bin_content[0..store_str_length as usize]
+		);
 		if io_read_try.is_err() {
 			cli::red_err(store_read_err);
 			return std::process::ExitCode::FAILURE;
 		}
+		store_str_draft = store_bin_content[0..store_str_length as usize].to_vec();
+		store_singleton_meta.name = String::from_utf8(store_str_draft).unwrap();
+
+		io_read_try = store_file_handle.read(&mut store_bin_content[0..12]);
+		if io_read_try.is_err() {
+			cli::red_err(store_read_err);
+			return std::process::ExitCode::FAILURE;
+		}
+		store_str_draft = store_bin_content[0..12 as usize].to_vec();
+		store_singleton_meta.id = String::from_utf8(store_str_draft).unwrap();
+
+		io_read_try = store_file_handle.read(&mut store_bin_content[0..12]);
+		if io_read_try.is_err() {
+			cli::red_err(store_read_err);
+			return std::process::ExitCode::FAILURE;
+		}
+		store_str_draft = store_bin_content[0..12 as usize].to_vec();
+		store_singleton_meta.file = String::from_utf8(store_str_draft).unwrap();
+
 		bo_read_try = store_file_handle.read_u64::<BigEndian>();
 		if bo_read_try.is_err() {
 			cli::red_err(store_read_err);
 			return std::process::ExitCode::FAILURE;
 		}
-		store_singleton_meta.index = bo_read_try.unwrap() as u64;
+		store_singleton_meta.index = bo_read_try.unwrap();
 
 		bo_read_try = store_file_handle.read_u64::<BigEndian>();
 		if bo_read_try.is_err() {
 			cli::red_err(store_read_err);
 			return std::process::ExitCode::FAILURE;
 		}
-		store_singleton_meta.data_length = bo_read_try.unwrap() as u64;
+		store_singleton_meta.data_length = bo_read_try.unwrap();
 
 		singletons.insert(
 			store_singleton_meta.id,
 			(
+				store_singleton_meta.name,
 				store_singleton_meta.file,
 				store_singleton_meta.index,
 				store_singleton_meta.data_length
@@ -267,7 +297,8 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		);
 	}
 	for s in singletons {
-		println!("{:?}", s);
+		println!("{:?}", s.0);
+		println!("{:?}", s.1);
 	}
 
 	return std::process::ExitCode::SUCCESS;
