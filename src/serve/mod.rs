@@ -68,7 +68,6 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let mut io_read_try: io::Result<usize>;
 	let mut bo_read8_try: io::Result<u8>;
 	let mut bo_read_try: io::Result<u64>;
-	let mut store_read_err: String;
 	let mut store_str_draft: Vec<u8>;
 	let mut store_singleton_meta = SingletonMeta {
 		id: String::new(),
@@ -230,15 +229,17 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 		.unwrap()
 	);
 
-	store_read_err = format!(
-		"Failed to load the content of: {:?}",
-		store_item
-	);
+	let store_read_err = || {
+		return format!(
+			"Failed to load the content of: {:?}",
+			store_item
+		);
+	};
 	store_bin_content.resize(12, 0);
 	while store_file_handle.stream_position().unwrap() < store_file_length {
 		bo_read8_try = store_file_handle.read_u8();
 		if bo_read8_try.is_err() {
-			cli::red_err(store_read_err);
+			cli::red_err(store_read_err());
 			return std::process::ExitCode::FAILURE;
 		}
 		store_str_length = bo_read8_try.unwrap();
@@ -250,7 +251,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			&mut store_bin_content[0..store_str_length as usize]
 		);
 		if io_read_try.is_err() {
-			cli::red_err(store_read_err);
+			cli::red_err(store_read_err());
 			return std::process::ExitCode::FAILURE;
 		}
 		store_str_draft = store_bin_content[0..store_str_length as usize].to_vec();
@@ -258,7 +259,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 		io_read_try = store_file_handle.read(&mut store_bin_content[0..12]);
 		if io_read_try.is_err() {
-			cli::red_err(store_read_err);
+			cli::red_err(store_read_err());
 			return std::process::ExitCode::FAILURE;
 		}
 		store_str_draft = store_bin_content[0..12 as usize].to_vec();
@@ -266,7 +267,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 		io_read_try = store_file_handle.read(&mut store_bin_content[0..12]);
 		if io_read_try.is_err() {
-			cli::red_err(store_read_err);
+			cli::red_err(store_read_err());
 			return std::process::ExitCode::FAILURE;
 		}
 		store_str_draft = store_bin_content[0..12 as usize].to_vec();
@@ -274,14 +275,14 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 		bo_read_try = store_file_handle.read_u64::<BigEndian>();
 		if bo_read_try.is_err() {
-			cli::red_err(store_read_err);
+			cli::red_err(store_read_err());
 			return std::process::ExitCode::FAILURE;
 		}
 		store_singleton_meta.index = bo_read_try.unwrap();
 
 		bo_read_try = store_file_handle.read_u64::<BigEndian>();
 		if bo_read_try.is_err() {
-			cli::red_err(store_read_err);
+			cli::red_err(store_read_err());
 			return std::process::ExitCode::FAILURE;
 		}
 		store_singleton_meta.data_length = bo_read_try.unwrap();
