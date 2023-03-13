@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
-use  std::collections::HashMap;
+use std::collections::HashMap;
 use std::io::{self, Read, Seek, SeekFrom};
 
 use clap::ArgMatches;
@@ -10,19 +10,40 @@ use crate::cli;
 use crate::basics::{ self, StoreType };
 
 #[derive(Debug)]
+#[derive(Clone)]
+struct FileMeta {
+	size: u64,
+	reads: u16,
+	writing: bool,
+	holes: HashMap<
+		u64, // index
+		u64 // length
+	>
+}
+
+#[derive(Debug)]
+#[derive(Clone)]
 struct SingletonMeta {
-	id: String,
 	name: String,
 	file: String,
 	index: u64,
 	data_length: u64
 }
 
-struct Collection {
-	name: String,
-	display_name: String
+// struct Collection {
+// 	name: String,
+// 	display_name: String
+// }
+
+fn store_read_err(store_item: PathBuf) -> String {
+	return format!(
+		"Failed to load the content of: {:?}",
+		store_item
+	);
 }
 
+#[allow(unused_assignments)]
+#[allow(unused_variables)]
 pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 	//########## ----- PART 1: PRELIMINARY TASKS ----- ##########//
@@ -41,26 +62,25 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let cluster_port_scan: bool; // Port scanning toggle for API connection
 	let verbose: bool; // Whether or not the terminal is verbose
 
-	// Map relating each singleton id to its location
-	let mut singletons =
-		HashMap::<String, (String, String, u64, u64)>::new()
-	;
-	// Map relating each hole location in singletons, to its size
-	let mut singletons_holes = HashMap::<(String, u64), u64>::new();
+	// Map relating each singleton id to its metadata
+	let mut singletons = HashMap::<String, SingletonMeta>::new();
+	// Map relating each singleton file name to its metadata
+	let mut singleton_files = HashMap::<String, FileMeta>::new();
 
 	// Map relating each Collection to its metadata
-	let mut collections_meta = HashMap::<String, Collection>::new();
+	// let mut collections_meta = HashMap::<String, Collection>::new();
 	// Map relating each collection item id to its location
-	let mut collections = HashMap::<
-		String, HashMap<String, (String, u64)>
-	>::new();
+	// let mut collections = HashMap::<
+	// 	String, HashMap<String, (String, u64)>
+	// >::new();
 	// Map relating each hole location in collections, to its size
-	let mut collections_holes = HashMap::<
-		String, HashMap<(String, u64), u64>
-	>::new();
+	// let mut collections_files = HashMap::<
+	// 	String, HashMap<(String, u64), u64>
+	// >::new();
 
 	let mut store_item: PathBuf; // A `pathbuf` to index resources in the store
 	let store_text_content: String; // A String to store their content
+	let mut store_file_name: String; // A string store temporarily file names
 	let mut store_file_length: u64;
 	let mut store_str_length: u8;
 	let mut store_file_handle: io::BufReader<fs::File>;
@@ -70,7 +90,6 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let mut bo_read_try: io::Result<u64>;
 	let mut store_str_draft: Vec<u8>;
 	let mut store_singleton_meta = SingletonMeta {
-		id: String::new(),
 		name: String::new(),
 		file: String::new(),
 		index: 0,
@@ -211,8 +230,13 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	}
 
 
-	// --> Loading the index of the singletons
-	// ---------------------------------------
+
+	//########## ----- PART 2: LOADING THE STORE'S DATA ----- ##########//
+	//###########################################################//
+
+
+	// --> Loading the index and files of the singletons
+	// -------------------------------------------------
 
 	store_item = store_dir.clone();
 	store_item.push("singletons/rixindex");
@@ -228,18 +252,42 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	store_file_handle = io::BufReader::new(fs::File::open(&store_item)
 		.unwrap()
 	);
-
-	let store_read_err = || {
-		return format!(
-			"Failed to load the content of: {:?}",
-			store_item
-		);
-	};
 	store_bin_content.resize(12, 0);
+
+	// Loading the files list
+	loop {
+		io_read_try = store_file_handle.read(&mut store_bin_content[0..1]);
+		if io_read_try.is_err() {
+			cli::red_err(store_read_err(store_item));
+			return std::process::ExitCode::FAILURE;
+		}
+		if store_bin_content[0] == 0u8 { break; }
+		io_read_try = store_file_handle.read(&mut store_bin_content[1..12]);
+		if io_read_try.is_err() {
+			cli::red_err(store_read_err(store_item));
+			return std::process::ExitCode::FAILURE;
+		}
+		store_str_draft = store_bin_content[0..12 as usize].to_vec();
+		store_file_name = String::from_utf8(store_str_draft).unwrap();
+
+		bo_read_try = store_file_handle.read_u64::<BigEndian>();
+		if bo_read_try.is_err() {
+			cli::red_err(store_read_err(store_item));
+			return std::process::ExitCode::FAILURE;
+		}
+		singleton_files.insert(store_file_name, FileMeta {
+			size: bo_read_try.unwrap(),
+			reads: 0,
+			writing: false,
+			holes: HashMap::<u64, u64>::new()
+		});
+	}
+
+	// Loading the data index
 	while store_file_handle.stream_position().unwrap() < store_file_length {
 		bo_read8_try = store_file_handle.read_u8();
 		if bo_read8_try.is_err() {
-			cli::red_err(store_read_err());
+			cli::red_err(store_read_err(store_item));
 			return std::process::ExitCode::FAILURE;
 		}
 		store_str_length = bo_read8_try.unwrap();
@@ -251,7 +299,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			&mut store_bin_content[0..store_str_length as usize]
 		);
 		if io_read_try.is_err() {
-			cli::red_err(store_read_err());
+			cli::red_err(store_read_err(store_item));
 			return std::process::ExitCode::FAILURE;
 		}
 		store_str_draft = store_bin_content[0..store_str_length as usize].to_vec();
@@ -259,15 +307,15 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 		io_read_try = store_file_handle.read(&mut store_bin_content[0..12]);
 		if io_read_try.is_err() {
-			cli::red_err(store_read_err());
+			cli::red_err(store_read_err(store_item));
 			return std::process::ExitCode::FAILURE;
 		}
 		store_str_draft = store_bin_content[0..12 as usize].to_vec();
-		store_singleton_meta.id = String::from_utf8(store_str_draft).unwrap();
+		store_file_name = String::from_utf8(store_str_draft).unwrap();
 
 		io_read_try = store_file_handle.read(&mut store_bin_content[0..12]);
 		if io_read_try.is_err() {
-			cli::red_err(store_read_err());
+			cli::red_err(store_read_err(store_item));
 			return std::process::ExitCode::FAILURE;
 		}
 		store_str_draft = store_bin_content[0..12 as usize].to_vec();
@@ -275,28 +323,44 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 
 		bo_read_try = store_file_handle.read_u64::<BigEndian>();
 		if bo_read_try.is_err() {
-			cli::red_err(store_read_err());
+			cli::red_err(store_read_err(store_item));
 			return std::process::ExitCode::FAILURE;
 		}
 		store_singleton_meta.index = bo_read_try.unwrap();
 
 		bo_read_try = store_file_handle.read_u64::<BigEndian>();
 		if bo_read_try.is_err() {
-			cli::red_err(store_read_err());
+			cli::red_err(store_read_err(store_item));
 			return std::process::ExitCode::FAILURE;
 		}
 		store_singleton_meta.data_length = bo_read_try.unwrap();
 
-		singletons.insert(
-			store_singleton_meta.id,
-			(
-				store_singleton_meta.name,
-				store_singleton_meta.file,
-				store_singleton_meta.index,
-				store_singleton_meta.data_length
-			)
-		);
+		singletons.insert(store_file_name, store_singleton_meta.clone());
 	}
+
+
+	// --> Loading the file list for the singletons
+	// --------------------------------------------
+
+	// store_item = store_dir.clone();
+	// store_item.push("singletons/rixindex");
+	// if !store_item.exists() {
+	// 	cli::red_err(
+	// 		"The file: \"".to_owned()
+	// 			+ store_item.to_str().unwrap()
+	// 			+ "\" was not found !"
+	// 	);
+	// 	return std::process::ExitCode::FAILURE;
+	// }
+	// store_file_length = store_item.metadata().unwrap().len();
+	// store_file_handle = io::BufReader::new(fs::File::open(&store_item)
+	// 	.unwrap()
+	// );
+	for s in singleton_files {
+		println!("{:?}", s.0);
+		println!("{:?}", s.1);
+	}
+	print!("\n\n--------------------------------------\n\n");
 	for s in singletons {
 		println!("{:?}", s.0);
 		println!("{:?}", s.1);
