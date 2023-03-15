@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io::{self, Read, Seek};
 
 use clap::ArgMatches;
 use byteorder::{ ReadBytesExt, BigEndian };
@@ -82,6 +82,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let store_text_content: String; // A String to store their content
 	let mut store_file_name: String; // A string store temporarily file names
 	let mut store_file_length: u64;
+	let mut store_item_number: u64;
 	let mut store_str_length: u8;
 	let mut store_file_handle: io::BufReader<fs::File>;
 	let mut store_bin_content = Vec::<u8>::new();
@@ -243,8 +244,8 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	if !store_item.exists() {
 		cli::red_err(
 			"The file: \"".to_owned()
-				+ store_item.to_str().unwrap()
-				+ "\" was not found !"
+			+ store_item.to_str().unwrap()
+			+ "\" was not found !"
 		);
 		return std::process::ExitCode::FAILURE;
 	}
@@ -255,14 +256,14 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	store_bin_content.resize(12, 0);
 
 	// Loading the files list
-	loop {
-		io_read_try = store_file_handle.read(&mut store_bin_content[0..1]);
-		if io_read_try.is_err() {
-			cli::red_err(store_read_err(store_item));
-			return std::process::ExitCode::FAILURE;
-		}
-		if store_bin_content[0] == 0u8 { break; }
-		io_read_try = store_file_handle.read(&mut store_bin_content[1..12]);
+	bo_read_try = store_file_handle.read_u64::<BigEndian>();
+	if bo_read_try.is_err() {
+		cli::red_err(store_read_err(store_item));
+		return std::process::ExitCode::FAILURE;
+	}
+	store_item_number = bo_read_try.unwrap();
+	for i in 0..store_item_number {
+		io_read_try = store_file_handle.read(&mut store_bin_content[0..12]);
 		if io_read_try.is_err() {
 			cli::red_err(store_read_err(store_item));
 			return std::process::ExitCode::FAILURE;
@@ -275,6 +276,7 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 			cli::red_err(store_read_err(store_item));
 			return std::process::ExitCode::FAILURE;
 		}
+
 		singleton_files.insert(store_file_name, FileMeta {
 			size: bo_read_try.unwrap(),
 			reads: 0,
