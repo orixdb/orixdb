@@ -23,6 +23,12 @@ struct FileMeta {
 }
 
 #[derive(Debug)]
+// #[derive(Clone)]
+struct DataType {
+	value: u8
+}
+
+#[derive(Debug)]
 #[derive(Clone)]
 struct SingletonMeta {
 	name: String,
@@ -32,10 +38,14 @@ struct SingletonMeta {
 	data_length: u64
 }
 
-// struct Collection {
-// 	name: String,
-// 	display_name: String
-// }
+#[derive(Debug)]
+// #[derive(Clone)]
+struct CollectionMeta {
+	data_type: u8,
+	file: String,
+	index: u64,
+	data_length: u64
+}
 
 fn store_read_err(store_item: PathBuf) -> String {
 	return format!(
@@ -70,11 +80,11 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	let mut singleton_files = HashMap::<String, FileMeta>::new();
 
 	// Map relating each Collection to its metadata
-	// let mut collections_meta = HashMap::<String, Collection>::new();
+	let mut collections_list = HashMap::<String, String>::new();
 	// Map relating each collection item id to its location
-	// let mut collections = HashMap::<
-	// 	String, HashMap<String, (String, u64)>
-	// >::new();
+	let mut collections = HashMap::<
+		String, (DataType, CollectionMeta)
+	>::new();
 	// Map relating each hole location in collections, to its size
 	// let mut collections_files = HashMap::<
 	// 	String, HashMap<(String, u64), u64>
@@ -398,6 +408,62 @@ pub fn main(matches: &ArgMatches) -> std::process::ExitCode {
 	if bo_read_try.is_err() {
 		cli::red_err(store_read_err(store_item));
 		return std::process::ExitCode::FAILURE;
+	}
+	store_item_number = bo_read_try.unwrap();
+	for i in 0..store_item_number {
+		io_read_try = store_file_handle.read(
+			&mut store_bin_content[0..12 as usize]
+		);
+		if io_read_try.is_err() {
+			cli::red_err(store_read_err(store_item));
+			return std::process::ExitCode::FAILURE;
+		}
+		store_str_draft = store_bin_content[0..12 as usize].to_vec();
+		store_str_parse = String::from_utf8(store_str_draft);
+		if store_str_parse.is_err() {
+			cli::red_err(store_read_err(store_item));
+			return std::process::ExitCode::FAILURE;
+		}
+		store_id_str = store_str_parse.unwrap();
+
+		bo_read8_try = store_file_handle.read_u8();
+		if bo_read8_try.is_err() {
+			cli::red_err(store_read_err(store_item));
+			return std::process::ExitCode::FAILURE;
+		}
+		store_str_length = bo_read8_try.unwrap();
+
+		if store_bin_content.len() < store_str_length as usize {
+			store_bin_content.resize(store_str_length as usize, 0);
+		}
+		io_read_try = store_file_handle.read(
+			&mut store_bin_content[0..store_str_length as usize]
+		);
+		if io_read_try.is_err() {
+			cli::red_err(store_read_err(store_item));
+			return std::process::ExitCode::FAILURE;
+		}
+		store_str_draft = store_bin_content[0..store_str_length as usize].to_vec();
+		store_str_parse = String::from_utf8(store_str_draft);
+		if store_str_parse.is_err() {
+			cli::red_err(store_read_err(store_item));
+			return std::process::ExitCode::FAILURE;
+		}
+		collections_list.insert(store_id_str, store_str_parse.unwrap());
+	}
+
+	for s in singleton_files {
+		println!("{}", s.0);
+		println!("{:?}", s.1);
+	}
+	println!("\n");
+	for s in singletons {
+		println!("{}", s.0);
+		println!("{:?}", s.1);
+	}
+	println!("\n");
+	for s in collections_list {
+		println!("{} => {}", s.0, s.1);
 	}
 
 	return std::process::ExitCode::SUCCESS;
